@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -67,6 +68,80 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     loadUserName();
     loadHome();
+
+    _scrollController.addListener(
+      _updateScrollbar,
+    );
+  }
+
+
+
+  @override
+  void dispose() {
+
+    _scrollController.dispose();
+
+    super.dispose();
+  }
+
+  bool _showScrollbar = false;
+
+  double _scrollProgress = 0;
+
+  Timer? _scrollTimer;
+
+  final ScrollController _scrollController =
+  ScrollController();
+
+  void _updateScrollbar() {
+
+    if (!_scrollController.hasClients) {
+      return;
+    }
+
+    final max =
+        _scrollController.position.maxScrollExtent;
+
+    if (max <= 0) {
+      return;
+    }
+
+    final offset =
+        _scrollController.offset;
+
+    _scrollProgress =
+        (offset / max)
+            .clamp(0.0, 1.0);
+
+    if (!_showScrollbar) {
+
+      setState(() {
+        _showScrollbar = true;
+      });
+    } else {
+
+      setState(() {});
+    }
+
+    _scrollTimer?.cancel();
+
+    _scrollTimer = Timer(
+
+      const Duration(
+        milliseconds: 800,
+      ),
+
+          () {
+
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _showScrollbar = false;
+        });
+      },
+    );
   }
 
   @override
@@ -162,38 +237,131 @@ class _HomePageState extends State<HomePage> {
 
             // Scrollable content - starts below header, extends behind navbar
             Padding(
-              padding: const EdgeInsets.only(top: 110),
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  await loadHome();
-                },
-                child: CustomScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: [
+              padding: const EdgeInsets.only(
+                top: 110,
+              ),
 
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: _buildCategories(),
+              child: Stack(
+
+                children: [
+
+                  RefreshIndicator(
+
+                    onRefresh: () async {
+                      await loadHome();
+                    },
+
+                    child: CustomScrollView(
+
+                      controller:
+                      _scrollController,
+
+                      physics:
+                      const AlwaysScrollableScrollPhysics(),
+
+                      slivers: [
+
+                        SliverToBoxAdapter(
+
+                          child: Padding(
+
+                            padding:
+                            const EdgeInsets.all(
+                              16,
+                            ),
+
+                            child:
+                            _buildCategories(),
+                          ),
+                        ),
+
+                        SliverList(
+
+                          delegate:
+                          SliverChildBuilderDelegate(
+
+                                (
+                                context,
+                                index,
+                                ) {
+
+                              return _buildShelf(
+                                shelves[index],
+                              );
+                            },
+
+                            childCount:
+                            shelves.length,
+                          ),
+                        ),
+
+                        const SliverToBoxAdapter(
+
+                          child: SizedBox(
+                            height: 150,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Positioned(
+
+                    right: 0,
+
+                    top: 20,
+
+                    bottom: 160,
+
+                    child: IgnorePointer(
+
+                      child: AnimatedOpacity(
+
+                        opacity:
+                        _showScrollbar
+                            ? 1
+                            : 0,
+
+                        duration:
+                        const Duration(
+                          milliseconds: 250,
+                        ),
+
+                        child: Align(
+
+                          alignment: Alignment(
+
+                            1,
+
+                            -1 +
+                                (_scrollProgress * 2),
+                          ),
+
+                          child: Container(
+
+                            width: 5,
+
+                            height: 55,
+
+                            decoration:
+
+                            BoxDecoration(
+
+                              color:
+                              AppColors.primary,
+
+                              borderRadius:
+
+                              BorderRadius.circular(
+                                999,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                          return _buildShelf(shelves[index]); // Widget biasa
-                        },
-                        childCount: shelves.length,
-                      ),
-                    ),
-
-                    const SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: 150,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
 
@@ -228,11 +396,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategories() {
     final categories = [
-      "Workout",
-      "Relax",
-      "Energize",
-      "Commute",
-      "Focus"
+      "All",
+      "Music",
+      "Events",
     ];
 
     return SizedBox(
@@ -245,11 +411,16 @@ class _HomePageState extends State<HomePage> {
               horizontal: 18,
             ),
             decoration: BoxDecoration(
-              color: AppColors.background2,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(30),
             ),
             alignment: Alignment.center,
-            child: Text(categories[index]),
+            child: Text(
+                categories[index],
+              style: TextStyle(
+                color: Colors.white
+              ),
+            ),
           );
         },
         separatorBuilder: (_, __) =>
