@@ -3,19 +3,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:sawitify/presentation/states/new_music_service.dart';
-import 'package:sawitify/presentation/states/new_music_service.dart';
 import 'package:sawitify/presentation/widgets/auto_marque.dart';
 
-import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
-import '../../data/repository/player_repository.dart';
 import '../pages/player_page.dart';
 import 'youtube_thumbnail.dart';
 
 class MiniPlayer extends StatefulWidget {
-  const MiniPlayer({
-    super.key
-  });
+  const MiniPlayer({super.key});
 
   @override
   State<MiniPlayer> createState() => _MiniPlayerState();
@@ -23,15 +18,6 @@ class MiniPlayer extends StatefulWidget {
 
 class _MiniPlayerState extends State<MiniPlayer>
     with SingleTickerProviderStateMixin {
-
-  late final PlayerRepository playerRepository;
-  bool isLoadingStream = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
   void _navigateToPlayer() {
     showModalBottomSheet(
       context: context,
@@ -45,156 +31,133 @@ class _MiniPlayerState extends State<MiniPlayer>
   }
 
   Future<void> _togglePlayPause() async {
-
-    final service =
-        NewMusicService.instance;
-
-    if (service.player.playing) {
-      await service.pause();
-    } else {
-      await service.play();
-    }
+    await NewMusicService.instance.togglePlayPause();
   }
 
   Future<void> _skipToNext() async {
-    await NewMusicService.instance
-        .next();
+    await NewMusicService.instance.next();
   }
 
   bool _isImageLoading = false;
   String? _lastVideoId;
 
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-    listenable:
-    NewMusicService.instance,
-    builder: (context, _) {
+      listenable: NewMusicService.instance,
+      builder: (context, _) {
+        final service = NewMusicService.instance;
 
-      final track = NewMusicService.instance.currentTrack;
+        final track = service.currentTrack;
 
-      if (track == null) {
-        return const SizedBox.shrink();
-      }
+        if (track == null) {
+          return const SizedBox.shrink();
+        }
 
-      if (_lastVideoId != track.videoId) {
+        if (_lastVideoId != track.videoId) {
+          _lastVideoId = track.videoId;
 
-        _lastVideoId = track.videoId;
+          _isImageLoading = true;
+        }
 
-        _isImageLoading = true;
-      }
-
-
-    return GestureDetector(
-      onTap: isLoadingStream ? null : _navigateToPlayer,
-      child: Container(
-          height: 60,
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(100),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.white.withValues(alpha: 0.25),
-                      Colors.white.withValues(alpha: 0.35),
+        return GestureDetector(
+          onTap: service.loadingTrack ? null : _navigateToPlayer,
+          child: Container(
+            height: 60,
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(100),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white.withValues(alpha: 0.25),
+                        Colors.white.withValues(alpha: 0.35),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      width: 0.5,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 5),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    width: 0.5,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                ),
-                child: Row(
-                  children: [
-                    StreamBuilder<PlayerState>(
-                      stream: NewMusicService.instance.player.playerStateStream,
-                      builder: (context, snapshot) {
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      StreamBuilder<PlayerState>(
+                        stream:
+                            NewMusicService.instance.player.playerStateStream,
+                        builder: (context, snapshot) {
+                          final isPlaying = snapshot.data?.playing ?? false;
 
-                        final isPlaying =
-                            snapshot.data?.playing ?? false;
+                          if (isPlaying && _isImageLoading) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!mounted) return;
 
-                        if (isPlaying && _isImageLoading) {
-
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-
-                            if (!mounted) return;
-
-                            setState(() {
-
-                              _isImageLoading = false;
-
+                              setState(() {
+                                _isImageLoading = false;
+                              });
                             });
-                          });
-                        }
+                          }
 
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-
-                            YoutubeThumbnail(
-                              key: ValueKey(track.videoId),
-                              videoId: track.videoId,
-                              width: 45,
-                              height: 45,
-                              fit: BoxFit.cover,
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-
-                            if (_isImageLoading)
-
-                              Container(
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              YoutubeThumbnail(
+                                key: ValueKey(track.videoId),
+                                videoId: track.videoId,
                                 width: 45,
                                 height: 45,
+                                fit: BoxFit.cover,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
 
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
+                              if (_isImageLoading)
+                                Container(
+                                  width: 45,
+                                  height: 45,
 
-                                child: const Center(
-                                  child: SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+
+                                  child: const Center(
+                                    child: SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 12),
 
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment:
-                        MainAxisAlignment.center,
-                        crossAxisAlignment:
-                        CrossAxisAlignment.start,
-                        children: [
-                          autoMarquee(
-                            text: track.title,
-                            style: TextStyle(
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            autoMarquee(
+                              text: track.title,
+                              style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 shadows: [
@@ -203,12 +166,13 @@ class _MiniPlayerState extends State<MiniPlayer>
                                     offset: const Offset(0, 1),
                                     blurRadius: 3,
                                   ),
-                                ]
-                            ), height: 20,
-                          ),
-                          autoMarquee(
-                            text: track.artist,
-                            style: TextStyle(
+                                ],
+                              ),
+                              height: 20,
+                            ),
+                            autoMarquee(
+                              text: track.artist,
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: Colors.white70,
                                 shadows: [
@@ -217,65 +181,67 @@ class _MiniPlayerState extends State<MiniPlayer>
                                     offset: const Offset(0, 1),
                                     blurRadius: 3,
                                   ),
-                                ]
-                            ), height: 15,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(
-                      width: 40,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: _togglePlayPause,
-                        icon: StreamBuilder<PlayerState>(
-                          stream: NewMusicService.instance.player.playerStateStream,
-                          builder: (context, snapshot) {
-
-                            final state = snapshot.data;
-
-                            final isPlaying =
-                                state?.playing ?? false;
-
-                            final completed =
-                                state?.processingState ==
-                                    ProcessingState.completed;
-
-                            return Icon(
-                              (isPlaying && !completed)
-                                  ? Icons.pause
-                                  : Icons.play_arrow,
-                              color: AppColors.primary,
-                              size: 24,
-                            );
-                          },
-                        )
-                      ),
-                    ),
-
-                    SizedBox(
-                      width: 40,
-                      child: IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: _skipToNext,
-                        icon: Icon(
-                          Icons.skip_next,
-                          color: Colors.white70,
-                          size: 24,
+                                ],
+                              ),
+                              height: 15,
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+
+                      SizedBox(
+                        width: 40,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: _togglePlayPause,
+                          icon: StreamBuilder<PlayerState>(
+                            stream: NewMusicService
+                                .instance
+                                .player
+                                .playerStateStream,
+                            builder: (context, snapshot) {
+                              final state = snapshot.data;
+
+                              final isPlaying = state?.playing ?? false;
+
+                              final completed =
+                                  state?.processingState ==
+                                  ProcessingState.completed;
+
+                              return Icon(
+                                (isPlaying && !completed)
+                                    ? Icons.pause
+                                    : Icons.play_arrow,
+                                color: AppColors.primary,
+                                size: 24,
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(
+                        width: 40,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          onPressed: _skipToNext,
+                          icon: Icon(
+                            Icons.skip_next,
+                            color: Colors.white70,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      );
-    },
+        );
+      },
     );
   }
 }
