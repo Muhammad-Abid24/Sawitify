@@ -6,6 +6,7 @@ import 'package:sawitify/presentation/widgets/player_playback.dart';
 import '../../core/theme/app_theme.dart';
 import '../states/new_music_service.dart';
 import 'auto_marque.dart';
+import 'circle_button.dart';
 
 class MusicInfoSection extends StatefulWidget {
   const MusicInfoSection({
@@ -41,7 +42,7 @@ class _MusicInfoSectionState
     return Column(
       children: [
         const SizedBox(
-          height: 20,
+          height: 11,
         ),
 
         Row(
@@ -58,15 +59,15 @@ class _MusicInfoSectionState
                       fontSize:
                       size.height < 700
                           ? 30
-                          : 24,
+                          : 23,
                       fontWeight:
-                      FontWeight.w600,
+                      FontWeight.w500,
                     ),
-                    height: 37,
+                    height: 30,
                   ),
 
                   const SizedBox(
-                    height: 4,
+                    height: 3,
                   ),
 
                   autoMarquee(
@@ -76,36 +77,36 @@ class _MusicInfoSectionState
                       fontSize:
                       size.height < 700
                           ? 28
-                          : 20,
+                          : 19,
                       fontWeight:
                       FontWeight.w600,
                     ),
-                    height: 30,
+                    height: 25,
                   ),
                 ],
               ),
             ),
+            const SizedBox( width: 5),
 
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.star_outline,
-                color: Colors.white,
-              ),
+
+            CircleButton(
+              icon: Icons.star_outline,
+              width: 40,
+              height: 40,
             ),
 
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.more_horiz,
-                color: Colors.white,
-              ),
+            const SizedBox( width: 5),
+
+            CircleButton(
+              icon: Icons.more_horiz,
+              width: 40,
+              height: 40,
             ),
           ],
         ),
 
         const SizedBox(
-          height: 32,
+          height: 22,
         ),
 
         StreamBuilder<Duration>(
@@ -228,7 +229,7 @@ class _MusicInfoSectionState
             ),
 
             const SizedBox(
-              width: 25,
+              width: 15,
             ),
 
             Expanded(
@@ -236,7 +237,7 @@ class _MusicInfoSectionState
             ),
 
             const SizedBox(
-              width: 25,
+              width: 15,
             ),
 
             const Icon(
@@ -255,31 +256,17 @@ class _MusicInfoSectionState
           mainAxisAlignment:
           MainAxisAlignment.spaceEvenly,
           children: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.lyrics,
-                color: Colors.white,
-                size: 30,
-              ),
+            CircleButton(
+              icon: Icons.lyrics,
             ),
 
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.speaker,
-                color: Colors.white,
-                size: 30,
-              ),
+            CircleButton(
+              icon: Icons.speaker_group,
             ),
 
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.list_alt,
-                color: Colors.white,
-                size: 30,
-              ),
+
+            CircleButton(
+              icon: Icons.playlist_play,
             ),
           ],
         )

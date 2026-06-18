@@ -27,13 +27,13 @@ class _PlaybackControlsState extends State<PlaybackControls> {
     final isTablet = width > 700;
 
     final iconSize =
-    isTablet ? 54.0 : 42.0;
+    isTablet ? 54.0 : 40.0;
 
     final playSize =
-    isTablet ? 82.0 : 70.0;
+    isTablet ? 82.0 : 55.0;
 
     final bgPlaySize =
-    isTablet ? 130.0 : 100.0;
+    isTablet ? 130.0 : 70.0;
 
 
     Future<void> skipToNext() async {

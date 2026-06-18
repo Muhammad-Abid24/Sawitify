@@ -6,11 +6,15 @@ import 'package:flutter/material.dart';
 class CircleButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback? onTap;
+  final double? width;
+  final double? height;
 
   const CircleButton({
     super.key,
     required this.icon,
     this.onTap,
+    this.width = 50,
+    this.height = 50,
   });
 
   @override
@@ -80,8 +84,8 @@ class _CircleButtonState
               sigmaY: 20,
             ),
             child: Container(
-              width: 50,
-              height: 50,
+              width: widget.width,
+              height: widget.height,
               color: Colors.white.withOpacity(.12),
               child: Icon(
                 widget.icon,

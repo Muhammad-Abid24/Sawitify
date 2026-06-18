@@ -440,16 +440,39 @@ class _HomePageState extends State<HomePage> {
               horizontal: 16,
               vertical: 12,
             ),
-            child: Text(
-              getShelfTitle(shelf.title),
-              style: const TextStyle(
-                fontSize: 23,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary,
+            child: Row(
+            mainAxisAlignment:
+            MainAxisAlignment.start,
+            children: [
+              SizedBox(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 5,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius:
+                      BorderRadius.circular(200),
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
 
+              const SizedBox(width: 5),
+
+              Text(
+                getShelfTitle(shelf.title),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              ]
+            )
+
+          ),
           SizedBox(
             height: 220,
             child: ListView.builder(

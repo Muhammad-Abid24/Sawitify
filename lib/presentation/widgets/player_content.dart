@@ -78,7 +78,7 @@ class PlayerContent extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.topCenter,
                       child: Container(
-                        margin: const EdgeInsets.only(top: 65),
+                        margin: const EdgeInsets.only(top: 60),
                         width: 60,
                         height: 6,
                         decoration: BoxDecoration(
