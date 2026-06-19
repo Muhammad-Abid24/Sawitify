@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_volume_controller/flutter_volume_controller.dart';
+import 'package:sawitify/core/utils/audio_output.dart';
 import 'package:sawitify/presentation/widgets/player_playback.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -262,6 +265,29 @@ class _MusicInfoSectionState
 
             CircleButton(
               icon: Icons.speaker_group,
+              onTap: () async {
+
+                if (Platform.isIOS) {
+
+                  await AudioOutput.show();
+
+                  return;
+                }
+
+                final devices =
+                await AudioOutput
+                    .getDevices();
+
+                if (!context.mounted) {
+                  return;
+                }
+
+                _showAndroidBottomSheet(
+                  context,
+
+                  devices,
+                );
+              },
             ),
 
 
@@ -673,4 +699,142 @@ class _MusicInfoSectionState
 
     return Icons.volume_down_rounded;
   }
+}
+
+
+void _showAndroidBottomSheet(
+
+    BuildContext context,
+
+    List<dynamic> devices,
+
+    ) {
+
+  final device =
+      devices.first;
+
+  final isBluetooth =
+  device['isBluetooth'] as bool;
+
+  showModalBottomSheet(
+
+    context: context,
+
+    backgroundColor:
+
+    const Color(
+      0xFF1E1E1E,
+    ),
+
+    shape:
+
+    const RoundedRectangleBorder(
+
+      borderRadius:
+
+      BorderRadius.vertical(
+
+        top:
+        Radius.circular(
+          24,
+        ),
+      ),
+    ),
+
+    builder: (_) {
+
+      return SafeArea(
+
+        child: Padding(
+
+          padding:
+
+          const EdgeInsets.all(
+            20,
+          ),
+
+          child: Column(
+
+            mainAxisSize:
+
+            MainAxisSize.min,
+
+            children: [
+
+              ListTile(
+
+                leading: Icon(
+
+                  isBluetooth
+
+                      ? Icons.headphones
+
+                      : Icons.phone_android,
+
+                  color: Colors.white,
+                ),
+
+                title: Text(
+
+                  device['name'],
+
+                  style:
+
+                  const TextStyle(
+
+                    color:
+
+                    Colors.white,
+
+                    fontSize:
+                    16,
+                  ),
+                ),
+              ),
+
+              const Divider(),
+
+              ListTile(
+
+                leading:
+
+                const Icon(
+
+                  Icons.bluetooth,
+
+                  color:
+                  Colors.blue,
+                ),
+
+                title:
+
+                const Text(
+
+                  'Hubungkan perangkat Bluetooth',
+
+                  style:
+
+                  TextStyle(
+
+                    color:
+                    Colors.white,
+                  ),
+                ),
+
+                onTap: () async {
+
+                  Navigator.pop(
+                    context,
+                  );
+
+                  await AudioOutput
+                      .openBluetoothSettings();
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }

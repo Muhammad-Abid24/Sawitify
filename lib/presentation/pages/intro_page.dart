@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -38,7 +39,12 @@ class _IntroScreenState extends State<IntroScreen> {
   }
 
   Future<void> _initializeGoogleSignIn() async {
-    await _googleSignIn.initialize();
+
+    await _googleSignIn.initialize(
+
+      serverClientId:
+      dotenv.env['CLIENT_ID_FB'],
+    );
   }
 
   Future<void> _loadVersion() async {

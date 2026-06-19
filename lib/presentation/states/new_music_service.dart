@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
@@ -201,7 +202,35 @@ class NewMusicService extends ChangeNotifier {
         milliseconds: int.tryParse(ytPlayer.durationMs) ?? 0,
       );
 
-      await player.setUrl(ytPlayer.streamUrl);
+      await _updateNowPlaying(
+        track,
+      );
+
+      await player.setAudioSource(
+
+        AudioSource.uri(
+
+          Uri.parse(
+            ytPlayer.streamUrl,
+          ),
+
+          tag: MediaItem(
+
+            id: track.videoId,
+
+            title: track.title,
+
+            artist: track.artist,
+
+            artUri: Uri.parse(
+              track.thumbnail,
+            ),
+
+            duration:
+            _trackDuration,
+          ),
+        ),
+      );
     } finally {
       _setLoading(false);
     }
@@ -475,6 +504,27 @@ class NewMusicService extends ChangeNotifier {
 
     _loadingTrack = value;
     notifyListeners();
+  }
+
+  MediaItem? _currentMediaItem;
+  Future<void> _updateNowPlaying(
+      TrackModel track,
+      ) async {
+
+    _currentMediaItem = MediaItem(
+
+      id: track.videoId,
+
+      title: track.title,
+
+      artist: track.artist,
+
+      artUri: Uri.parse(
+        track.thumbnail,
+      ),
+
+      duration: _trackDuration,
+    );
   }
 
   @override

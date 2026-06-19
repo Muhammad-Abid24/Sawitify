@@ -46,3 +46,10 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+
+    implementation(
+        "androidx.mediarouter:mediarouter:1.7.0"
+    )
+}
