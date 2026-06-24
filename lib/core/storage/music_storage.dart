@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-class NewMusicStorage {
+class MusicStorage {
   static const String _playlistKey = "music_playlist";
   static const String _currentIndexKey = "music_current_index";
   static const String _shuffleKey = "music_shuffle";

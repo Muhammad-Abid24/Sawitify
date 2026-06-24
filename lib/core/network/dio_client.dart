@@ -13,19 +13,14 @@ class DioClient {
         connectTimeout: const Duration(seconds: 40),
         receiveTimeout: const Duration(seconds: 40),
         sendTimeout: const Duration(seconds: 40),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: {"Content-Type": "application/json"},
       ),
     );
 
     dio.interceptors.addAll([
       BaseInterceptor(),
       ErrorInterceptor(),
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-      ),
+      LogInterceptor(requestBody: true, responseBody: true),
     ]);
 
     return dio;
@@ -38,19 +33,14 @@ class DioClient {
         connectTimeout: const Duration(seconds: 40),
         receiveTimeout: const Duration(seconds: 40),
         sendTimeout: const Duration(seconds: 40),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: {"Content-Type": "application/json"},
       ),
     );
 
     dio.interceptors.addAll([
       PlayerInterceptor(),
       ErrorInterceptor(),
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-      ),
+      LogInterceptor(requestBody: true, responseBody: true),
     ]);
 
     return dio;

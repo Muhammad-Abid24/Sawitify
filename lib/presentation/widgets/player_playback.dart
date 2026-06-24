@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../data/service/music_service/music_service.dart';
 import '../states/new_music_service.dart';
 import 'circle_button.dart';
 
@@ -24,15 +25,15 @@ class _PlaybackControlsState extends State<PlaybackControls> {
     final bgPlaySize = isTablet ? 130.0 : 70.0;
 
     Future<void> skipToNext() async {
-      await NewMusicService.instance.next();
+      await MusicService.instance.next();
     }
 
     Future<void> skipToPrevious() async {
-      await NewMusicService.instance.previous();
+      await MusicService.instance.previous();
     }
 
     Future<void> togglePlayPause() async {
-      final service = NewMusicService.instance;
+      final service = MusicService.instance;
 
       if (service.player.playing) {
         await service.pause();
@@ -45,9 +46,9 @@ class _PlaybackControlsState extends State<PlaybackControls> {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         AnimatedBuilder(
-          animation: NewMusicService.instance,
+          animation: MusicService.instance,
           builder: (context, _) {
-            final loading = NewMusicService.instance.loadingTrack;
+            final loading = MusicService.instance.loadingTrack;
 
             return Container(
               width: 80,
@@ -77,7 +78,7 @@ class _PlaybackControlsState extends State<PlaybackControls> {
         ),
 
         StreamBuilder<PlayerState>(
-          stream: NewMusicService.instance.player.playerStateStream,
+          stream: MusicService.instance.player.playerStateStream,
           builder: (context, snapshot) {
             final state = snapshot.data;
 
@@ -109,9 +110,9 @@ class _PlaybackControlsState extends State<PlaybackControls> {
         ),
 
         AnimatedBuilder(
-          animation: NewMusicService.instance,
+          animation: MusicService.instance,
           builder: (context, _) {
-            final loading = NewMusicService.instance.loadingTrack;
+            final loading = MusicService.instance.loadingTrack;
 
             return Container(
               width: 80,

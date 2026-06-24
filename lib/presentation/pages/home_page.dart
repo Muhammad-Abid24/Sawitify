@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:card_stack_swiper/card_stack_swiper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sawitify/core/theme/app_theme.dart';
@@ -9,24 +10,18 @@ import '../../core/network/api_client.dart';
 import '../../core/network/response/home_response.dart';
 import '../../core/storage/session_manager.dart';
 import '../../core/utils/audio_output.dart';
+import '../../data/model/concert_model.dart';
 import '../../data/model/track_model.dart';
+import '../../data/repository/concert_repository.dart';
 import '../../data/repository/playlist_repository.dart';
 import '../../data/repository/home_repository.dart';
-import '../states/new_music_service.dart';
+import '../../data/service/music_service/music_service.dart';
 import '../widgets/album_card.dart';
-import 'new_playlist_page.dart';
+import 'all_playlist_page.dart';
+import 'playlist_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-
-  // @override
-  // Widget build(BuildContext context) {
-  //   return MaterialApp(
-  //     debugShowCheckedModeBanner: false,
-  //     theme: ThemeData.dark(),
-  //     home: const HomePageState(),
-  //   );
-  // }
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -42,6 +37,10 @@ class _HomePageState extends State<HomePage> {
   bool isLoading = true;
 
   String? errorMessage;
+
+  List<ConcertModel> concerts1 = [];
+  List<ConcertModel> concerts2 = [];
+  List<ConcertModel> concerts3 = [];
 
   String getShelfTitle(String title) {
     switch (true) {
@@ -67,13 +66,18 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     loadUserName();
     loadHome();
+    loadConcert1();
 
     _scrollController.addListener(_updateScrollbar);
   }
 
+  final CardStackSwiperController _concertController =
+      CardStackSwiperController();
+
   @override
   void dispose() {
     _scrollController.dispose();
+    _concertController.dispose();
 
     super.dispose();
   }
@@ -213,6 +217,7 @@ class _HomePageState extends State<HomePage> {
                 RefreshIndicator(
                   onRefresh: () async {
                     await loadHome();
+                    await loadConcert1();
                   },
 
                   child: CustomScrollView(
@@ -229,13 +234,9 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
 
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          return _buildShelf(shelves[index]);
-                        }, childCount: shelves.length),
-                      ),
+                      _buildContent(),
 
-                      const SliverToBoxAdapter(child: SizedBox(height: 150)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
                     ],
                   ),
                 ),
@@ -274,14 +275,6 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-
-          // Floating MiniPlayer (above navbar)
-          // const Positioned(
-          //   left: 0,
-          //   right: 0,
-          //   bottom: 100,
-          //   child: MiniPlayer(),
-          // ),
         ],
       ),
     );
@@ -319,29 +312,572 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  int _selectedCategory = 0;
   Widget _buildCategories() {
     final categories = ["All", "Music", "Events"];
 
     return SizedBox(
       height: 38,
+
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+
+        itemCount: categories.length,
+
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+
         itemBuilder: (_, index) {
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            decoration: BoxDecoration(
-              color: AppColors.primary,
+          final isSelected = index == _selectedCategory;
+
+          return Material(
+            color: Colors.transparent,
+
+            child: InkWell(
               borderRadius: BorderRadius.circular(30),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              categories[index],
-              style: TextStyle(color: Colors.white),
+
+              onTap: () {
+                if (_selectedCategory == index) {
+                  return;
+                }
+
+                setState(() {
+                  _selectedCategory = index;
+                });
+              },
+
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+
+                decoration: BoxDecoration(
+                  color: isSelected ? AppColors.primary : AppColors.background1,
+
+                  borderRadius: BorderRadius.circular(30),
+                ),
+
+                alignment: Alignment.center,
+
+                child: Text(
+                  categories[index],
+
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
             ),
           );
         },
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemCount: categories.length,
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    // ================= ALL =================
+
+    if (_selectedCategory == 0) {
+      return SliverToBoxAdapter(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (concerts1.isNotEmpty) _buildConcertSwiper(),
+            const SizedBox(height: 25),
+
+            ...shelves.map((shelf) => _buildShelf(shelf)),
+          ],
+        ),
+      );
+    }
+
+    // ================= MUSIC =================
+
+    if (_selectedCategory == 1) {
+      return SliverToBoxAdapter(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: shelves.map((shelf) => _buildShelf(shelf)).toList(),
+        ),
+      );
+    }
+
+    // ================= EVENTS =================
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 5,
+
+                  height: 20,
+
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                const Text(
+                  'Konser di Indonesia',
+
+                  style: TextStyle(
+                    color: Colors.white,
+
+                    fontSize: 20,
+
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 3),
+
+            SizedBox(
+              height: 250,
+
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+
+                itemCount: concerts1.length,
+
+                separatorBuilder: (_, __) => const SizedBox(width: 13),
+
+                itemBuilder: (_, index) {
+                  return SizedBox(
+                    width: 160,
+
+                    child: _buildConcertCard1(concerts1[index]),
+                  );
+                },
+              ),
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConcertSwiper() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+
+      children: [
+        const SizedBox(height: 8),
+
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+
+          child: Row(
+            children: [
+              Container(
+                width: 5,
+
+                height: 18,
+
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+
+              const SizedBox(width: 6),
+
+              const Text(
+                'Upcoming Concert',
+
+                style: TextStyle(
+                  color: Colors.white,
+
+                  fontSize: 18,
+
+                  fontWeight: FontWeight.bold,
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 30),
+
+        Center(
+          child: SizedBox(
+            width: 200,
+
+            height: 200,
+
+            child: CardStackSwiper(
+              controller: _concertController,
+
+              cardsCount: concerts1.length,
+
+              initialIndex: 0,
+
+              isLoop: true,
+
+              onSwipe: (previousIndex, currentIndex, direction) {
+                return true;
+              },
+
+              onEnd: () {
+                debugPrint('Reached end');
+              },
+
+              cardBuilder:
+                  (context, index, horizontalPercentage, verticalPercentage) {
+                    return _buildStackConcertCard(concerts1[index]);
+                  },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStackConcertCard(ConcertModel concert) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+
+        borderRadius: BorderRadius.circular(8),
+
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .15),
+
+            blurRadius: 12,
+
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+
+      clipBehavior: Clip.antiAlias,
+
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          // =====================
+          // IMAGE
+          // =====================
+          Stack(
+            children: [
+              SizedBox(
+                height: 110,
+
+                width: double.infinity,
+
+                child: Image.network(
+                  concert.image ?? '',
+
+                  fit: BoxFit.cover,
+
+                  errorBuilder: (_, __, ___) {
+                    return Container(
+                      color: AppColors.background1,
+
+                      alignment: Alignment.center,
+
+                      child: const Icon(
+                        Icons.music_note,
+
+                        size: 35,
+
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              Positioned(
+                top: 10,
+
+                right: 10,
+
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+
+                    vertical: 5,
+                  ),
+
+                  decoration: BoxDecoration(
+                    color: AppColors.background1.withAlpha(70),
+
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+
+                  child: Text(
+                    concert.startDate ?? '',
+
+                    style: const TextStyle(
+                      fontSize: 10,
+
+                      fontWeight: FontWeight.w700,
+
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // =====================
+          // CONTENT
+          // =====================
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+
+                children: [
+                  Text(
+                    concert.title,
+
+                    maxLines: 1,
+
+                    overflow: TextOverflow.ellipsis,
+
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+
+                        size: 12,
+
+                        color: Colors.white,
+                      ),
+
+                      const SizedBox(width: 4),
+
+                      Expanded(
+                        child: Text(
+                          concert.address.last,
+
+                          maxLines: 1,
+
+                          overflow: TextOverflow.ellipsis,
+
+                          style: const TextStyle(
+                            fontSize: 11,
+
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  Text(
+                    concert.when ?? '',
+
+                    maxLines: 1,
+
+                    overflow: TextOverflow.ellipsis,
+
+                    style: const TextStyle(fontSize: 11, color: Colors.white),
+                  ),
+
+                  const Spacer(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConcertCard1(ConcertModel concert) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+
+      decoration: BoxDecoration(
+        color: AppColors.background2,
+
+        borderRadius: BorderRadius.circular(12),
+      ),
+
+      clipBehavior: Clip.antiAlias,
+
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+
+        children: [
+          // =====================
+          // IMAGE
+          // =====================
+          Stack(
+            children: [
+              SizedBox(
+                height: 120,
+
+                width: double.infinity,
+
+                child: Image.network(
+                  concert.image ?? '',
+
+                  fit: BoxFit.cover,
+
+                  errorBuilder: (_, __, ___) {
+                    return Container(
+                      color: AppColors.background1,
+
+                      alignment: Alignment.center,
+
+                      child: const Icon(
+                        Icons.music_note,
+
+                        color: Colors.white,
+
+                        size: 50,
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              Positioned(
+                left: 0,
+
+                right: 0,
+
+                bottom: 0,
+
+                height: 50,
+
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+
+                      end: Alignment.bottomCenter,
+
+                      colors: [Colors.transparent, AppColors.background2],
+                    ),
+                  ),
+                ),
+              ),
+
+              Positioned(
+                top: 10,
+
+                right: 10,
+
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+
+                    vertical: 5,
+                  ),
+
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+
+                  child: Text(
+                    concert.startDate ?? '',
+
+                    style: const TextStyle(
+                      fontSize: 10,
+
+                      color: Colors.black,
+
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // =====================
+          // CONTENT
+          // =====================
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+
+            child: Column(
+              children: [
+                Text(
+                  concert.title,
+
+                  maxLines: 1,
+
+                  overflow: TextOverflow.ellipsis,
+
+                  textAlign: TextAlign.center,
+
+                  style: const TextStyle(
+                    fontSize: 15,
+
+                    fontWeight: FontWeight.w600,
+
+                    color: Colors.white,
+                  ),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  concert.when ?? '',
+
+                  maxLines: 1,
+
+                  overflow: TextOverflow.ellipsis,
+
+                  textAlign: TextAlign.center,
+
+                  style: const TextStyle(fontSize: 12, color: Colors.white70),
+                ),
+
+                const SizedBox(height: 4),
+
+                Text(
+                  concert.address.last,
+
+                  maxLines: 1,
+
+                  overflow: TextOverflow.ellipsis,
+
+                  textAlign: TextAlign.center,
+
+                  style: const TextStyle(fontSize: 11, color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -415,7 +951,7 @@ class _HomePageState extends State<HomePage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => NewPlaylistPage(
+                            builder: (_) => PlaylistPage(
                               browseId: item.browseId,
                               title: item.title,
                               subTitle: item.subtitle,
@@ -461,12 +997,12 @@ class _HomePageState extends State<HomePage> {
                             duration: tracks[0].duration,
                           );
 
-                          await NewMusicService.instance.setPlaylist(
+                          await MusicService.instance.setPlaylist(
                             playlist: tracks,
                             startIndex: 0,
                           );
 
-                          await NewMusicService.instance.playTrack(0);
+                          await MusicService.instance.playTrack(0);
                         } catch (e) {
                           debugPrint('PLAY ALBUM ERROR: $e');
                         }
@@ -498,6 +1034,83 @@ class _HomePageState extends State<HomePage> {
       debugPrint('USERNAME : $userName');
       debugPrint('EMAIL : $email');
       debugPrint('PHOTO : $photoUrl');
+    }
+  }
+
+  Future<void> loadConcert1() async {
+    try {
+      debugPrint('============= LOAD FIREBASE CONCERT =============');
+
+      final repository = ConcertRepository();
+
+      final result = await repository.getConcerts();
+
+      debugPrint('TOTAL CONCERT : ${result.length}');
+
+      for (int i = 0; i < result.length; i++) {
+        final item = result[i];
+
+        debugPrint('========== CONCERT [$i] ==========');
+
+        debugPrint('TITLE : ${item.title}');
+
+        debugPrint('START DATE : ${item.startDate}');
+
+        debugPrint('EVENT DATE : ${item.eventDate}');
+
+        debugPrint('EVENT YEAR : ${item.eventYear}');
+
+        debugPrint('WHEN : ${item.when}');
+
+        debugPrint('ADDRESS : ${item.address.join(', ')}');
+
+        debugPrint('DESCRIPTION : ${item.description}');
+
+        debugPrint('LINK : ${item.link}');
+
+        debugPrint('MAP IMAGE : ${item.mapImage}');
+
+        debugPrint('MAP LINK : ${item.mapLink}');
+
+        debugPrint('THUMBNAIL : ${item.thumnail}');
+
+        debugPrint('IMAGE : ${item.image}');
+
+        debugPrint('TICKETS : ${item.tickets.length}');
+
+        for (int j = 0; j < item.tickets.length; j++) {
+          final ticket = item.tickets[j];
+
+          debugPrint('----- TICKET [$j] -----');
+
+          debugPrint('SOURCE : ${ticket.source}');
+
+          debugPrint('SOURCE ICON : ${ticket.sourceIcon}');
+
+          debugPrint('LINK : ${ticket.link}');
+
+          debugPrint('TYPE : ${ticket.linkType}');
+        }
+
+        debugPrint('===============================');
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      result.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
+
+      debugPrint('TOTAL CONCERT : ${result.length}');
+      setState(() {
+        concerts1 = result;
+      });
+    } catch (e, s) {
+      debugPrint('CONCERT ERROR : $e');
+
+      debugPrint(s.toString());
     }
   }
 

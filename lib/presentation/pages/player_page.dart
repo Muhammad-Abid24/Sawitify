@@ -1,41 +1,30 @@
 import 'package:flutter/cupertino.dart';
 
-import '../states/new_music_service.dart';
+import '../../data/service/music_service/music_service.dart';
 import '../widgets/player_content.dart';
 
 class PlayerPage extends StatefulWidget {
-  const PlayerPage({
-    super.key,
-  });
+  const PlayerPage({super.key});
 
   @override
-  State<PlayerPage> createState() =>
-      _PlayerPage();
+  State<PlayerPage> createState() => _PlayerPage();
 }
 
 class _PlayerPage extends State<PlayerPage>
     with SingleTickerProviderStateMixin {
-
   @override
   Widget build(BuildContext context) {
-
     return ListenableBuilder(
-      listenable:
-      NewMusicService.instance,
+      listenable: MusicService.instance,
 
       builder: (_, __) {
+        final music = MusicService.instance;
 
-        final music =
-            NewMusicService.instance;
+        final track = music.currentTrack;
 
-        final track =
-            music.currentTrack;
+        final duration = music.trackDuration;
 
-        final duration =
-            music.trackDuration;
-
-        final playlistName =
-            music.playlistName;
+        final playlistName = music.playlistName;
 
         final durationText =
             "${duration.inMinutes}:${(duration.inSeconds % 60).toString().padLeft(2, '0')}";
@@ -44,11 +33,8 @@ class _PlayerPage extends State<PlayerPage>
           return const SizedBox();
         }
 
-        final hdThumbnail =
-        track.thumbnail.replaceAll(
-          RegExp(
-            r'=w\d+-h\d+.*',
-          ),
+        final hdThumbnail = track.thumbnail.replaceAll(
+          RegExp(r'=w\d+-h\d+.*'),
           '=w1200-h1200',
         );
 
@@ -59,36 +45,23 @@ class _PlayerPage extends State<PlayerPage>
           snap: true,
           expand: false,
 
-          builder: (
-              context,
-              controller,
-              ) {
-
+          builder: (context, controller) {
             return PlayerContent(
-              imageUrl:
-              hdThumbnail
-                  .trim()
-                  .isNotEmpty
+              imageUrl: hdThumbnail.trim().isNotEmpty
                   ? hdThumbnail
                   : 'assets/logo/ic_sawity.png',
 
-              controller:
-              controller,
+              controller: controller,
 
-              title:
-              track.title,
+              title: track.title,
 
-              artist:
-              track.artist,
+              artist: track.artist,
 
-              duration:
-              durationText,
+              duration: durationText,
 
-              videoId:
-              track.videoId,
+              videoId: track.videoId,
 
-              playlistName:
-              playlistName
+              playlistName: playlistName,
             );
           },
         );

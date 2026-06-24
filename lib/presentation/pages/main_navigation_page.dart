@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/storage/session_manager.dart';
-import '../states/new_music_service.dart';
+import '../../data/service/music_service/music_service.dart';
 import '../widgets/bottom_nav.dart';
 import '../widgets/mini_player.dart';
 import 'home_page.dart';
@@ -73,9 +73,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             right: 0,
             bottom: 95,
             child: ListenableBuilder(
-              listenable: NewMusicService.instance,
+              listenable: MusicService.instance,
               builder: (context, _) {
-                final track = NewMusicService.instance.currentTrack;
+                final track = MusicService.instance.currentTrack;
 
                 if (track == null) {
                   return const SizedBox.shrink();

@@ -10,12 +10,12 @@ import 'package:just_audio/just_audio.dart';
 import '../../core/network/api_client.dart';
 import '../../data/model/track_model.dart';
 import '../../data/repository/player_repository.dart';
-import '../../core/storage/new_music_storage.dart';
+import '../../core/storage/music_storage.dart';
 
-class NewMusicService extends ChangeNotifier {
-  static final NewMusicService instance = NewMusicService._();
+class NewMusicServiceX extends ChangeNotifier {
+  static final NewMusicServiceX instance = NewMusicServiceX._();
 
-  NewMusicService._();
+  NewMusicServiceX._();
 
   final AudioPlayer player = AudioPlayer();
 
@@ -91,11 +91,11 @@ class NewMusicService extends ChangeNotifier {
 
     await session.configure(const AudioSessionConfiguration.music());
 
-    _shuffleEnabled = await NewMusicStorage.loadShuffle();
+    _shuffleEnabled = await MusicStorage.loadShuffle();
 
-    _currentIndex = await NewMusicStorage.loadCurrentIndex();
+    _currentIndex = await MusicStorage.loadCurrentIndex();
 
-    final stored = await NewMusicStorage.loadPlaylist();
+    final stored = await MusicStorage.loadPlaylist();
 
     _playlist = stored.map((e) => TrackModel.fromJson(jsonDecode(e))).toList();
 
@@ -104,7 +104,7 @@ class NewMusicService extends ChangeNotifier {
     }
 
     if (_playlist.isEmpty) {
-      final storedTrack = await NewMusicStorage.loadCurrentTrack();
+      final storedTrack = await MusicStorage.loadCurrentTrack();
 
       if (storedTrack != null) {
         _playlist = [TrackModel.fromJson(jsonDecode(storedTrack))];
@@ -286,7 +286,7 @@ class NewMusicService extends ChangeNotifier {
 
       await player.play();
 
-      await NewMusicStorage.saveCurrentIndex(_currentIndex);
+      await MusicStorage.saveCurrentIndex(_currentIndex);
 
       await _saveCurrentTrack();
 
@@ -433,7 +433,7 @@ class NewMusicService extends ChangeNotifier {
 
     if (_shuffleEnabled) {}
 
-    await NewMusicStorage.saveCurrentIndex(_currentIndex);
+    await MusicStorage.saveCurrentIndex(_currentIndex);
 
     await _saveCurrentTrack();
 
@@ -459,7 +459,7 @@ class NewMusicService extends ChangeNotifier {
 
     if (_shuffleEnabled) {}
 
-    await NewMusicStorage.saveCurrentIndex(_currentIndex);
+    await MusicStorage.saveCurrentIndex(_currentIndex);
 
     await _saveCurrentTrack();
 
@@ -471,7 +471,7 @@ class NewMusicService extends ChangeNotifier {
   Future<void> setShuffle(bool enabled) async {
     _shuffleEnabled = enabled;
 
-    await NewMusicStorage.saveShuffle(enabled);
+    await MusicStorage.saveShuffle(enabled);
 
     if (enabled) {
       _buildShuffleQueue();
@@ -499,11 +499,11 @@ class NewMusicService extends ChangeNotifier {
   }
 
   Future<void> _savePlaylist() async {
-    await NewMusicStorage.savePlaylist(
+    await MusicStorage.savePlaylist(
       _playlist.map((e) => jsonEncode(e.toJson())).toList(),
     );
 
-    await NewMusicStorage.saveCurrentIndex(_currentIndex);
+    await MusicStorage.saveCurrentIndex(_currentIndex);
 
     await _saveCurrentTrack();
   }
@@ -513,13 +513,13 @@ class NewMusicService extends ChangeNotifier {
       return;
     }
 
-    await NewMusicStorage.saveCurrentTrack(
+    await MusicStorage.saveCurrentTrack(
       jsonEncode(_playlist[_currentIndex].toJson()),
     );
   }
 
   Future<void> _restoreCurrentTrack() async {
-    final storedTrack = await NewMusicStorage.loadCurrentTrack();
+    final storedTrack = await MusicStorage.loadCurrentTrack();
 
     if (storedTrack == null) {
       return;
@@ -547,7 +547,7 @@ class NewMusicService extends ChangeNotifier {
 
     await player.stop();
 
-    await NewMusicStorage.clear();
+    await MusicStorage.clear();
 
     notifyListeners();
   }
@@ -604,7 +604,7 @@ class NewMusicService extends ChangeNotifier {
 
     if (_shuffleEnabled) {}
 
-    await NewMusicStorage.saveCurrentIndex(_currentIndex);
+    await MusicStorage.saveCurrentIndex(_currentIndex);
 
     await _saveCurrentTrack();
 

@@ -8,7 +8,7 @@ import 'package:sawitify/presentation/widgets/rectangle_button.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/model/track_model.dart';
-import '../states/new_music_service.dart';
+import '../../data/service/music_service/music_service.dart';
 import 'auto_marque.dart';
 import 'circle_button.dart';
 
@@ -85,9 +85,9 @@ class _MusicInfoSectionState extends State<MusicInfoSection> {
         const SizedBox(height: 22),
 
         StreamBuilder<Duration>(
-          stream: NewMusicService.instance.player.positionStream,
+          stream: MusicService.instance.player.positionStream,
           builder: (context, positionSnapshot) {
-            final duration = NewMusicService.instance.trackDuration;
+            final duration = MusicService.instance.trackDuration;
 
             final rawPosition = positionSnapshot.data ?? Duration.zero;
 
@@ -271,7 +271,7 @@ class _MusicInfoSectionState extends State<MusicInfoSection> {
                         .round(),
                   );
 
-                  await NewMusicService.instance.player.seek(seekPosition);
+                  await MusicService.instance.player.seek(seekPosition);
 
                   setState(() {
                     _dragProgress = null;
@@ -469,7 +469,7 @@ void _showAndroidSpeakerBottomSheet(
 }
 
 void _showListQueue(BuildContext context, String playlistName) {
-  final music = NewMusicService.instance;
+  final music = MusicService.instance;
 
   showModalBottomSheet(
     context: context,
@@ -644,7 +644,7 @@ void _showListQueue(BuildContext context, String playlistName) {
 Widget _buildQueueTile({
   required BuildContext context,
 
-  required NewMusicService music,
+  required MusicService music,
 
   required TrackModel track,
 

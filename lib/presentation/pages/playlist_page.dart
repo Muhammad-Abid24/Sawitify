@@ -10,13 +10,13 @@ import '../../data/model/track_model.dart';
 import '../../data/model/playlist_model.dart';
 import '../../data/repository/player_repository.dart';
 import '../../data/repository/playlist_repository.dart';
-import '../states/new_music_service.dart';
+import '../../data/service/music_service/music_service.dart';
 import '../widgets/circle_button.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/my_form.dart';
 
-class NewPlaylistPage extends StatefulWidget {
-  const NewPlaylistPage({
+class PlaylistPage extends StatefulWidget {
+  const PlaylistPage({
     super.key,
     required this.browseId,
     required this.title,
@@ -30,10 +30,10 @@ class NewPlaylistPage extends StatefulWidget {
   final String thumbnail;
 
   @override
-  State<NewPlaylistPage> createState() => _PlaylistPageState();
+  State<PlaylistPage> createState() => _PlaylistPageState();
 }
 
-class _PlaylistPageState extends State<NewPlaylistPage>
+class _PlaylistPageState extends State<PlaylistPage>
     with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   String? errorMessage;
@@ -129,7 +129,7 @@ class _PlaylistPageState extends State<NewPlaylistPage>
       return;
     }
 
-    final service = NewMusicService.instance;
+    final service = MusicService.instance;
 
     await service.setPlaylist(playlist: tracks, startIndex: 0);
 
@@ -144,7 +144,7 @@ class _PlaylistPageState extends State<NewPlaylistPage>
     }
 
     final startIndex = Random().nextInt(tracks.length);
-    final service = NewMusicService.instance;
+    final service = MusicService.instance;
 
     await service.setPlaylist(playlist: tracks, startIndex: startIndex);
 
@@ -882,13 +882,13 @@ class _SongTile extends StatelessWidget {
 
                 if (!context.mounted) return;
 
-                await NewMusicService.instance.setPlaylist(
+                await MusicService.instance.setPlaylist(
                   playlist: tracks,
                   startIndex: originalIndex,
                   playlistName: pageState.widget.title,
                 );
 
-                await NewMusicService.instance.playTrack(originalIndex);
+                await MusicService.instance.playTrack(originalIndex);
               } catch (e) {
                 debugPrint('PLAYER ERROR = $e');
 

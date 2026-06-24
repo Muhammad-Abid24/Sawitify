@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:sawitify/presentation/states/new_music_service.dart';
 
 import '../firebase_options.dart';
 import '../app.dart';
+import 'data/service/music_service/music_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +26,7 @@ Future<void> main() async {
     );
   }
 
-  await NewMusicService.instance.initialize();
+  await MusicService.instance.initialize();
 
   runApp(const ProviderScope(child: MainApp()));
 }
@@ -35,7 +35,7 @@ class AppLifecycleObserver with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.detached) {
-      NewMusicService.instance.forceKillPlayer();
+      MusicService.instance.forceKillPlayer();
     }
   }
 }

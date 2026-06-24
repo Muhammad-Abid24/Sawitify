@@ -6,6 +6,7 @@ import 'package:sawitify/presentation/states/new_music_service.dart';
 import 'package:sawitify/presentation/widgets/auto_marque.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../data/service/music_service/music_service.dart';
 import '../pages/player_page.dart';
 import 'youtube_thumbnail.dart';
 
@@ -31,11 +32,11 @@ class _MiniPlayerState extends State<MiniPlayer>
   }
 
   Future<void> _togglePlayPause() async {
-    await NewMusicService.instance.togglePlayPause();
+    await MusicService.instance.togglePlayPause();
   }
 
   Future<void> _skipToNext() async {
-    await NewMusicService.instance.next();
+    await MusicService.instance.next();
   }
 
   bool _isImageLoading = false;
@@ -44,9 +45,9 @@ class _MiniPlayerState extends State<MiniPlayer>
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: NewMusicService.instance,
+      listenable: MusicService.instance,
       builder: (context, _) {
-        final service = NewMusicService.instance;
+        final service = MusicService.instance;
 
         final track = service.currentTrack;
 
@@ -96,8 +97,7 @@ class _MiniPlayerState extends State<MiniPlayer>
                   child: Row(
                     children: [
                       StreamBuilder<PlayerState>(
-                        stream:
-                            NewMusicService.instance.player.playerStateStream,
+                        stream: MusicService.instance.player.playerStateStream,
                         builder: (context, snapshot) {
                           final isPlaying = snapshot.data?.playing ?? false;
 
@@ -196,10 +196,8 @@ class _MiniPlayerState extends State<MiniPlayer>
                           constraints: const BoxConstraints(),
                           onPressed: _togglePlayPause,
                           icon: StreamBuilder<PlayerState>(
-                            stream: NewMusicService
-                                .instance
-                                .player
-                                .playerStateStream,
+                            stream:
+                                MusicService.instance.player.playerStateStream,
                             builder: (context, snapshot) {
                               final state = snapshot.data;
 
