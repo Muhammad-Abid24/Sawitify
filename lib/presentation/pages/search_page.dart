@@ -58,7 +58,6 @@ class _SearchPageState extends State<SearchPage> {
               padding: const EdgeInsets.symmetric(horizontal: 0),
               child: MyForm(
                 controller: searchController,
-                capitalize: TextCapitalization.none,
                 hintText: 'Artist, Songs, Albums and More..',
                 prefixIcon: Icons.search,
               ),
@@ -97,24 +96,40 @@ class _SearchPageState extends State<SearchPage> {
                 itemBuilder: (_, index) {
                   final item = _items[index];
 
-                  return ListTile(
-                    onTap: () => _onItemTap(item),
+                  return Column(
+                    children: [
+                      ListTile(
+                        onTap: () => _onItemTap(item),
+                        leading: SizedBox(
+                          width: 45,
+                          height: 45,
+                          child: _buildThumbnail(item),
+                        ),
+                        title: Text(
+                          item.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
+                        ),
+                        subtitle: Text(
+                          item.subtitle,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
 
-                    leading: SizedBox(
-                      width: 45,
-                      height: 45,
-                      child: _buildThumbnail(item),
-                    ),
-
-                    title: Text(
-                      item.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 15),
-                    ),
-
-                    subtitle: Text(
-                      item.subtitle,
-                      style: const TextStyle(color: Colors.grey, fontSize: 13),
-                    ),
+                      const Padding(
+                        padding: EdgeInsets.only(left: 70, right: 12),
+                        child: Divider(
+                          height: 1,
+                          thickness: .1,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   );
                 },
               ),
@@ -259,13 +274,13 @@ class _SearchPageState extends State<SearchPage> {
       setState(() {
         _items = result.items.where((item) {
           switch (item.type) {
+            case SearchItemType.artist:
             case SearchItemType.song:
             case SearchItemType.album:
             case SearchItemType.playlist:
               return true;
 
             // jika Single diparsing sebagai Album
-            case SearchItemType.artist:
             case SearchItemType.suggestion:
             case SearchItemType.unknown:
               return false;

@@ -782,7 +782,6 @@ class _PlaylistPageState extends State<PlaylistPage>
             bottom: 30,
             child: MyForm(
               controller: searchController,
-              capitalize: TextCapitalization.none,
               hintText: 'Artist and Songs in playlist',
               prefixIcon: Icons.search,
             ),
