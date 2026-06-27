@@ -19,6 +19,7 @@ class MiniPlayer extends StatefulWidget {
 
 class _MiniPlayerState extends State<MiniPlayer>
     with SingleTickerProviderStateMixin {
+  String videoId = '';
   void _navigateToPlayer() {
     showModalBottomSheet(
       context: context,
@@ -26,7 +27,7 @@ class _MiniPlayerState extends State<MiniPlayer>
       backgroundColor: Colors.transparent,
       enableDrag: true,
       builder: (_) {
-        return PlayerPage();
+        return PlayerPage(videoId: videoId);
       },
     );
   }
@@ -60,6 +61,8 @@ class _MiniPlayerState extends State<MiniPlayer>
 
           _isImageLoading = true;
         }
+
+        videoId = track.videoId;
 
         return GestureDetector(
           onTap: service.loadingTrack ? null : _navigateToPlayer,
@@ -115,8 +118,8 @@ class _MiniPlayerState extends State<MiniPlayer>
                             alignment: Alignment.center,
                             children: [
                               YoutubeThumbnail(
-                                key: ValueKey(track.videoId),
-                                videoId: track.videoId,
+                                key: ValueKey(videoId),
+                                videoId: videoId,
                                 width: 45,
                                 height: 45,
                                 fit: BoxFit.cover,

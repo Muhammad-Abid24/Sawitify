@@ -4,7 +4,9 @@ import '../../data/service/music_service/music_service.dart';
 import '../widgets/player_content.dart';
 
 class PlayerPage extends StatefulWidget {
-  const PlayerPage({super.key});
+  final String? videoId;
+
+  const PlayerPage({super.key, this.videoId});
 
   @override
   State<PlayerPage> createState() => _PlayerPage();
@@ -33,10 +35,17 @@ class _PlayerPage extends State<PlayerPage>
           return const SizedBox();
         }
 
-        final hdThumbnail = track.thumbnail.replaceAll(
-          RegExp(r'=w\d+-h\d+.*'),
-          '=w1200-h1200',
-        );
+        // final hdThumbnail = track.thumbnail.replaceAll(
+        //   RegExp(r'=w\d+-h\d+.*'),
+        //   '=w1200-h1200',
+        // );
+
+        final imageUrl = track.thumbnail.trim().isNotEmpty
+            ? track.thumbnail.replaceAll(
+                RegExp(r'=w\d+-h\d+.*'),
+                '=w1200-h1200',
+              )
+            : 'https://i.ytimg.com/vi/${widget.videoId ?? track.videoId}/maxresdefault.jpg';
 
         return DraggableScrollableSheet(
           initialChildSize: 1,
@@ -47,9 +56,7 @@ class _PlayerPage extends State<PlayerPage>
 
           builder: (context, controller) {
             return PlayerContent(
-              imageUrl: hdThumbnail.trim().isNotEmpty
-                  ? hdThumbnail
-                  : 'assets/logo/ic_sawity.png',
+              imageUrl: imageUrl,
 
               controller: controller,
 

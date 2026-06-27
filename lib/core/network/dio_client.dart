@@ -66,4 +66,24 @@ class DioClient {
 
     return dio;
   }
+
+  static Dio artistDio() {
+    final dio = Dio(
+      BaseOptions(
+        baseUrl: ServiceConfig.baseUrl,
+        connectTimeout: const Duration(seconds: 40),
+        receiveTimeout: const Duration(seconds: 40),
+        sendTimeout: const Duration(seconds: 40),
+        headers: {"Content-Type": "application/json"},
+      ),
+    );
+
+    dio.interceptors.addAll([
+      SearchInterceptor(),
+      ErrorInterceptor(),
+      LogInterceptor(requestBody: true, responseBody: true),
+    ]);
+
+    return dio;
+  }
 }

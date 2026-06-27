@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:sawitify/core/utils/audio_output.dart';
 import 'package:sawitify/data/model/track_model.dart';
 import 'package:sawitify/data/service/music_service/music_service.dart';
+import 'package:sawitify/presentation/pages/artist_page.dart';
+import 'package:sawitify/presentation/pages/playlist_page.dart';
 import 'package:sawitify/presentation/widgets/my_form.dart';
 import '../../core/network/api_client.dart';
-import '../../core/theme/app_theme.dart';
 import '../../data/model/search_model.dart';
 import '../../data/repository/search_repository.dart';
 
@@ -23,9 +24,6 @@ class _SearchPageState extends State<SearchPage> {
   final _repository = SearchRepository(ApiClient());
   List<SearchItem> _items = [];
   List<String> _suggestions = [];
-
-  bool _loading = false;
-
   Timer? _debounce;
 
   @override
@@ -237,7 +235,6 @@ class _SearchPageState extends State<SearchPage> {
         if (!mounted) return;
 
         setState(() {
-          _loading = false;
           _items.clear();
           _suggestions.clear();
         });
@@ -252,9 +249,7 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _search(String keyword) async {
     if (!mounted) return;
 
-    setState(() {
-      _loading = true;
-    });
+    setState(() {});
 
     try {
       final result = await _repository.search(keyword);
@@ -262,7 +257,21 @@ class _SearchPageState extends State<SearchPage> {
       if (!mounted) return;
 
       setState(() {
-        _items = result.items;
+        _items = result.items.where((item) {
+          switch (item.type) {
+            case SearchItemType.song:
+            case SearchItemType.album:
+            case SearchItemType.playlist:
+              return true;
+
+            // jika Single diparsing sebagai Album
+            case SearchItemType.artist:
+            case SearchItemType.suggestion:
+            case SearchItemType.unknown:
+              return false;
+          }
+        }).toList();
+
         _suggestions = result.suggestions;
       });
     } catch (e, s) {
@@ -270,9 +279,7 @@ class _SearchPageState extends State<SearchPage> {
       debugPrintStack(stackTrace: s);
     } finally {
       if (mounted) {
-        setState(() {
-          _loading = false;
-        });
+        setState(() {});
       }
     }
   }
@@ -333,10 +340,45 @@ class _SearchPageState extends State<SearchPage> {
   Future<void> _onItemTap(SearchItem item) async {
     switch (item.type) {
       case SearchItemType.artist:
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (_) => ArtistPage(browseId: item.id)),
-        // );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ArtistPage(
+              browseId: item.id,
+              title: item.title,
+              subTitle: item.subtitle,
+              thumbnail: item.thumbnail,
+            ),
+          ),
+        );
+        break;
+
+      case SearchItemType.album:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PlaylistPage(
+              browseId: item.id,
+              title: item.title,
+              subTitle: item.subtitle,
+              thumbnail: item.thumbnail,
+            ),
+          ),
+        );
+        break;
+
+      case SearchItemType.playlist:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PlaylistPage(
+              browseId: item.id,
+              title: item.title,
+              subTitle: item.subtitle,
+              thumbnail: item.thumbnail,
+            ),
+          ),
+        );
         break;
 
       case SearchItemType.song:

@@ -22,6 +22,13 @@ abstract class ApiService {
     @Query('key') String apiKey,
   );
 
+  @POST('/browse')
+  Future<dynamic> artist(
+    @Query("alt") String alt,
+    @Query("key") String key,
+    @Body() Map<String, dynamic> body,
+  );
+
   @POST('/player')
   Future<dynamic> player(
     @Body() Map<String, dynamic> body,
