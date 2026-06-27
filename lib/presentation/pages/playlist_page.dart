@@ -343,6 +343,7 @@ class _PlaylistPageState extends State<PlaylistPage>
                           ),
                           child: Text(
                             widget.subTitle,
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: isTablet ? 25 : 15,

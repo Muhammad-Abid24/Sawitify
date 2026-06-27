@@ -21,8 +21,71 @@ extension ArtistAlbumRepository on ArtistRepository {
   // FEATURED ON
   // ======================================================
 
-  List<ArtistAlbum> _parseFeaturedOn(Map<String, dynamic> json) {
-    return _parseAlbumSection(json, "muncul di");
+  List<FeaturedOn> _parseFeaturedOn(Map<String, dynamic> json) {
+    return _parseAlbumSectionFeaturedOn(json, const [
+      "featured on",
+      "termasuk di",
+    ]);
+  }
+
+  // ======================================================
+  // PLAYLIST BY ARTIST
+  // ======================================================
+
+  List<FeaturedOn> _parsePlaylistArtist(Map<String, dynamic> json) {
+    return _parseAlbumSectionFeaturedOn(json, const [
+      "muncul di",
+      "playlist dari",
+      "playlist by",
+    ]);
+  }
+
+  // ======================================================
+  // SECTION
+  // ======================================================
+
+  List<FeaturedOn> _parseAlbumSectionFeaturedOn(
+    Map<String, dynamic> json,
+    List<String> sectionTitles,
+  ) {
+    final List<FeaturedOn> featureOn = [];
+
+    final sections = _sectionList(json);
+
+    for (final section in sections) {
+      final shelf =
+          section["musicCarouselShelfRenderer"] as Map<String, dynamic>?;
+
+      if (shelf == null) {
+        continue;
+      }
+
+      final title = _carouselTitle(shelf).toLowerCase().trim();
+
+      final matched = sectionTitles.any((e) => title.contains(e.toLowerCase()));
+
+      if (!matched) {
+        continue;
+      }
+
+      final List contents =
+          shelf["contents"] as List? ?? shelf["items"] as List? ?? [];
+
+      for (final item in contents) {
+        final renderer =
+            item["musicTwoRowItemRenderer"] as Map<String, dynamic>?;
+
+        if (renderer == null) {
+          continue;
+        }
+
+        featureOn.add(_parseFeaturedOnModel(renderer));
+      }
+
+      break;
+    }
+
+    return featureOn;
   }
 
   // ======================================================
@@ -83,6 +146,21 @@ extension ArtistAlbumRepository on ArtistRepository {
       title: _title(renderer),
       year: _year(subtitleRuns),
       thumbnail: _thumbnail(renderer["thumbnailRenderer"]),
+    );
+  }
+
+  FeaturedOn _parseFeaturedOnModel(Map<String, dynamic> renderer) {
+    final List subtitleRuns = renderer["subtitle"]?["runs"] as List? ?? [];
+
+    final subtitle = subtitleRuns.isNotEmpty
+        ? (subtitleRuns.first["text"] ?? "").toString()
+        : "";
+
+    return FeaturedOn(
+      browseId: _browseId(renderer),
+      title: _title(renderer),
+      thumbnail: _thumbnail(renderer["thumbnailRenderer"]),
+      subtitle: subtitle,
     );
   }
 }

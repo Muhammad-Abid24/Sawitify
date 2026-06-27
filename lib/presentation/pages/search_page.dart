@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:sawitify/core/utils/audio_output.dart';
 import 'package:sawitify/data/model/track_model.dart';
 import 'package:sawitify/data/service/music_service/music_service.dart';
-import 'package:sawitify/presentation/pages/artist_page.dart';
+import 'package:sawitify/presentation/pages/album_page.dart';
+import 'package:sawitify/presentation/pages/artist_page.dart' hide AlbumPage;
 import 'package:sawitify/presentation/pages/playlist_page.dart';
 import 'package:sawitify/presentation/widgets/my_form.dart';
 import '../../core/network/api_client.dart';
@@ -372,7 +373,7 @@ class _SearchPageState extends State<SearchPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PlaylistPage(
+            builder: (_) => AlbumPage(
               browseId: item.id,
               title: item.title,
               subTitle: item.subtitle,

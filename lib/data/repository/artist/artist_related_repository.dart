@@ -23,7 +23,10 @@ extension ArtistRelatedRepository on ArtistRepository {
           ? _carouselTitle(shelf).toLowerCase()
           : _shelfTitle(shelf).toLowerCase();
 
-      if (title != "artis terkait" && title != "related artists") {
+      if (!(title.contains("related") ||
+          title.contains("artis terkait") ||
+          title.contains("fans might also like") ||
+          title.contains("penggemar mungkin juga suka"))) {
         continue;
       }
 

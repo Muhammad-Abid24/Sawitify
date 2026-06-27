@@ -52,6 +52,7 @@ class ArtistRepository {
       videos: _parseVideos(json),
 
       featuredOn: _parseFeaturedOn(json),
+      playlistArtist: _parsePlaylistArtist(json),
 
       relatedArtists: _parseRelatedArtists(json),
     );

@@ -11,7 +11,8 @@ class ArtistResponse {
 
   final List<ArtistVideo> videos;
 
-  final List<ArtistAlbum> featuredOn;
+  final List<FeaturedOn> featuredOn;
+  final List<FeaturedOn> playlistArtist;
 
   final List<RelatedArtist> relatedArtists;
 
@@ -22,6 +23,7 @@ class ArtistResponse {
     required this.singles,
     required this.videos,
     required this.featuredOn,
+    required this.playlistArtist,
     required this.relatedArtists,
   });
 
@@ -33,6 +35,7 @@ class ArtistResponse {
       singles: const [],
       videos: const [],
       featuredOn: const [],
+      playlistArtist: const [],
       relatedArtists: const [],
     );
   }
@@ -103,6 +106,22 @@ class ArtistVideo {
     required this.title,
     required this.thumbnail,
     required this.views,
+  });
+}
+
+class FeaturedOn {
+  final String browseId;
+
+  final String title;
+  final String subtitle;
+
+  final String thumbnail;
+
+  const FeaturedOn({
+    required this.browseId,
+    required this.title,
+    required this.subtitle,
+    required this.thumbnail,
   });
 }
 

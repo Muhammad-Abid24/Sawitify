@@ -1,23 +1,22 @@
+import 'dart:math';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:sawitify/core/network/response/home_response.dart';
-import 'package:sawitify/data/model/artist_model.dart';
-import 'package:sawitify/data/model/track_model.dart';
-import 'package:sawitify/data/repository/artist/artist_repository.dart';
-import 'package:sawitify/data/repository/playlist_repository.dart';
-import 'package:sawitify/data/service/music_service/music_service.dart';
-import 'package:sawitify/presentation/pages/playlist_page.dart';
-import 'package:sawitify/presentation/widgets/album_card.dart';
 import 'package:sawitify/presentation/widgets/shimmer_playlist.dart';
-import 'package:sawitify/presentation/widgets/song_tiles.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/model/track_model.dart';
+import '../../data/model/playlist_model.dart';
+import '../../data/repository/player_repository.dart';
+import '../../data/repository/playlist_repository.dart';
+import '../../data/service/music_service/music_service.dart';
 import '../widgets/circle_button.dart';
 import '../widgets/mini_player.dart';
+import '../widgets/my_form.dart';
 
-class ArtistPage extends StatefulWidget {
-  const ArtistPage({
+class AlbumPage extends StatefulWidget {
+  const AlbumPage({
     super.key,
     required this.browseId,
     required this.title,
@@ -31,14 +30,45 @@ class ArtistPage extends StatefulWidget {
   final String thumbnail;
 
   @override
-  State<ArtistPage> createState() => _ArtistPageState();
+  State<AlbumPage> createState() => _AlbumPageState();
 }
 
-class _ArtistPageState extends State<ArtistPage>
+class _AlbumPageState extends State<AlbumPage>
     with SingleTickerProviderStateMixin {
+  bool _isLoading = true;
+  String? errorMessage;
+
+  PlaylistResponse? playlist;
+
+  late final PlayerRepository playerRepository;
+  final searchController = TextEditingController();
+  List<TrackModel> _filteredTracks = [];
+
+  List<TrackModel> get serviceTracks {
+    if (playlist == null) return [];
+
+    return playlist!.tracks.map((e) {
+      return TrackModel(
+        title: e.title,
+        artist: e.artist,
+        videoId: e.videoId,
+        thumbnail: e.thumbnail,
+        duration: e.duration, // sesuaikan
+      );
+    }).toList();
+  }
+
+  int _getOriginalIndex(TrackModel track) {
+    return serviceTracks.indexWhere((e) => e.videoId == track.videoId);
+  }
+
   @override
   void initState() {
-    _loadArtist();
+    super.initState();
+    playerRepository = PlayerRepository(ApiClient());
+    loadPlaylist();
+
+    searchController.addListener(_onSearchChanged);
 
     _playController = AnimationController(
       vsync: this,
@@ -52,271 +82,14 @@ class _ArtistPageState extends State<ArtistPage>
         reverseCurve: Curves.easeOutBack,
       ),
     );
-    super.initState();
   }
 
   @override
   void dispose() {
-    _loadArtist();
+    searchController.removeListener(_onSearchChanged);
+    searchController.dispose();
+    _playController.dispose();
     super.dispose();
-  }
-
-  bool _loading = true;
-
-  final _repository = ArtistRepository(ApiClient());
-  ArtistResponse? _artist;
-  Future<void> _loadArtist() async {
-    try {
-      final result = await _repository.getArtist(widget.browseId);
-
-      if (!mounted) return;
-
-      setState(() {
-        _artist = result;
-        _loading = false;
-      });
-    } catch (e) {
-      debugPrint(e.toString());
-
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
-    }
-  }
-
-  Widget _buildTopSongs(bool isTablet) {
-    if (_artist == null) {
-      return const SizedBox();
-    }
-
-    final tracks = _artist!.topSongs;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 20),
-
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 5,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Text(
-                'Top Songs',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  height: 1.0,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        Transform.translate(
-          offset: const Offset(0, -40),
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: tracks.length,
-            separatorBuilder: (_, __) => Padding(
-              padding: EdgeInsets.only(left: isTablet ? 118 : 70, right: 12),
-              child: Divider(height: 1, thickness: .1, color: Colors.white),
-            ),
-            itemBuilder: (_, index) {
-              final track = tracks[index];
-
-              return SongTiles(
-                track: track,
-                index: index,
-                isTablet: isTablet,
-                playlistName: _artist!.artist.name,
-                playlist: tracks,
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAlbums() {
-    if (_artist == null || _artist!.albums.isEmpty) {
-      return const SizedBox();
-    }
-
-    final albums = _artist!.albums;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 5,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(200),
-                ),
-              ),
-
-              const SizedBox(width: 6),
-
-              const Text(
-                "Albums",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            scrollDirection: Axis.horizontal,
-            itemCount: albums.length,
-            itemBuilder: (_, index) {
-              final album = albums[index];
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: SizedBox(
-                  width: 135,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      debugPrint("CLICK ALBUM");
-                      debugPrint("TITLE     : ${album.title}");
-                      debugPrint("BROWSE ID : ${album.browseId}");
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PlaylistPage(
-                            browseId: album.browseId,
-                            title: album.title,
-                            subTitle: album.year,
-                            thumbnail: album.thumbnail,
-                          ),
-                        ),
-                      );
-                    },
-                    child: AlbumCard(
-                      image: album.thumbnail,
-                      title: album.title,
-                      artist: album.year,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSingle() {
-    if (_artist == null || _artist!.singles.isEmpty) {
-      return const SizedBox();
-    }
-
-    final single = _artist!.singles;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 5,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(200),
-                ),
-              ),
-
-              const SizedBox(width: 6),
-
-              const Text(
-                "Singles & Eps",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        SizedBox(
-          height: 220,
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            scrollDirection: Axis.horizontal,
-            itemCount: single.length,
-            itemBuilder: (_, index) {
-              final album = single[index];
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: SizedBox(
-                  width: 135,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () {
-                      debugPrint("CLICK ALBUM");
-                      debugPrint("TITLE     : ${album.title}");
-                      debugPrint("BROWSE ID : ${album.browseId}");
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PlaylistPage(
-                            browseId: album.browseId,
-                            title: album.title,
-                            subTitle: album.year,
-                            thumbnail: album.thumbnail,
-                          ),
-                        ),
-                      );
-                    },
-                    child: AlbumCard(
-                      image: album.thumbnail,
-                      title: album.title,
-                      artist: album.year,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
   }
 
   late final AnimationController _playController;
@@ -328,7 +101,103 @@ class _ArtistPageState extends State<ArtistPage>
 
     await _playController.reverse();
 
-    //_playPlaylistFromStart();
+    _playPlaylistFromStart();
+  }
+
+  void _onSearchChanged() {
+    final query = searchController.text.trim().toLowerCase();
+
+    if (playlist == null) return;
+
+    setState(() {
+      if (query.isEmpty) {
+        _filteredTracks = serviceTracks;
+        return;
+      }
+
+      _filteredTracks = serviceTracks.where((track) {
+        return track.title.toLowerCase().contains(query) ||
+            track.artist.toLowerCase().contains(query);
+      }).toList();
+    });
+  }
+
+  Future<void> _playPlaylistFromStart() async {
+    final tracks = serviceTracks;
+
+    if (tracks.isEmpty) {
+      return;
+    }
+
+    final service = MusicService.instance;
+
+    await service.setPlaylist(playlist: tracks, startIndex: 0);
+
+    await service.playTrack(0);
+  }
+
+  Future<void> _playPlaylistShuffle() async {
+    final tracks = serviceTracks;
+
+    if (tracks.isEmpty) {
+      return;
+    }
+
+    final startIndex = Random().nextInt(tracks.length);
+    final service = MusicService.instance;
+
+    await service.setPlaylist(playlist: tracks, startIndex: startIndex);
+
+    await service.playTrack(startIndex);
+  }
+
+  Future<void> loadPlaylist() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        errorMessage = null;
+      });
+    }
+
+    try {
+      final repository = PlaylistRepository(ApiClient().dioBrowse);
+
+      final response = await repository.getPlaylistDetail(widget.browseId);
+
+      debugPrint("TITLE = ${response.title}");
+      debugPrint("TRACKS = ${response.tracks.length}");
+
+      for (final t in response.tracks) {
+        debugPrint("---------------------");
+        debugPrint("TITLE     = ${t.title}");
+        debugPrint("ARTIST    = ${t.artist}");
+        debugPrint("VIDEO ID  = ${t.videoId}");
+        debugPrint("THUMBNAIL = ${t.thumbnail}");
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        playlist = response;
+        _filteredTracks = serviceTracks;
+        _isLoading = false;
+      });
+
+      // Preload stream URLs untuk semua lagu di playlist
+      if (response.tracks.isNotEmpty) {
+        final videoIds = response.tracks.map((track) => track.videoId).toList();
+        debugPrint('🔄 Starting preload for ${videoIds.length} tracks...');
+      }
+    } catch (e) {
+      debugPrint('PLAYLIST ERROR: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -424,7 +293,7 @@ class _ArtistPageState extends State<ArtistPage>
           /// CONTENT
           RefreshIndicator(
             onRefresh: () async {
-              await _loadArtist();
+              await loadPlaylist();
             },
             child: CustomScrollView(
               physics: const BouncingScrollPhysics(),
@@ -474,10 +343,10 @@ class _ArtistPageState extends State<ArtistPage>
                           ),
                           child: Text(
                             widget.subTitle,
-                            textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: isTablet ? 18 : 14,
+                              color: Colors.white,
+                              fontSize: isTablet ? 25 : 15,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -489,7 +358,7 @@ class _ArtistPageState extends State<ArtistPage>
                 ),
 
                 /// GRADIENT AREA (PLAY + SUBTITLE + LIST)
-                if (_loading)
+                if (_isLoading)
                   SliverToBoxAdapter(
                     child: Column(
                       children: [
@@ -572,7 +441,7 @@ class _ArtistPageState extends State<ArtistPage>
                                     borderRadius: BorderRadius.circular(100),
                                   ),
                                   child: Text(
-                                    widget.subTitle,
+                                    '${_filteredTracks.length} Tracks',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: Colors.white70,
@@ -623,9 +492,6 @@ class _ArtistPageState extends State<ArtistPage>
                             Colors.black,
                             Colors.black,
                             Colors.black,
-                            Colors.black,
-                            Colors.black,
-                            Colors.black,
                           ],
                         ),
                       ),
@@ -643,10 +509,11 @@ class _ArtistPageState extends State<ArtistPage>
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  // CircleButton(
-                                  //   icon: Icons.shuffle,
-                                  //   onTap: _playPlaylistShuffle,
-                                  // ),
+                                  CircleButton(
+                                    icon: Icons.shuffle,
+                                    onTap: _playPlaylistShuffle,
+                                  ),
+
                                   const SizedBox(width: 20),
 
                                   Expanded(
@@ -701,17 +568,36 @@ class _ArtistPageState extends State<ArtistPage>
 
                             const SizedBox(height: 23),
 
-                            _buildTopSongs(isTablet),
-
-                            Transform.translate(
-                              offset: const Offset(0, -40),
-                              child: _buildAlbums(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: .15),
+                                borderRadius: BorderRadius.circular(100),
+                              ),
+                              child: Text(
+                                '${_filteredTracks.length} Tracks',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: isTablet ? 18 : 14,
+                                ),
+                              ),
                             ),
 
-                            Transform.translate(
-                              offset: const Offset(0, -40),
-                              child: _buildSingle(),
-                            ),
+                            const SizedBox(height: 20),
+
+                            ...List.generate(_filteredTracks.length, (index) {
+                              final track = _filteredTracks[index];
+
+                              return _SongTile(
+                                track: track,
+                                index: index,
+                                isTablet: isTablet,
+                              );
+                            }),
 
                             const SizedBox(height: 190),
                           ],
@@ -732,15 +618,13 @@ class _ArtistPageState extends State<ArtistPage>
               children: [
                 CircleButton(
                   icon: Icons.arrow_back_ios_new,
-                  colorIcon: AppColors.primary,
                   onTap: () => Navigator.pop(context),
                 ),
 
                 const Spacer(),
 
                 CircleButton(
-                  icon: Icons.ios_share,
-                  colorIcon: AppColors.primary,
+                  icon: Icons.share_outlined,
                   onTap: () => Navigator.pop(context),
                 ),
 
@@ -748,16 +632,176 @@ class _ArtistPageState extends State<ArtistPage>
 
                 CircleButton(
                   icon: Icons.more_horiz,
-                  colorIcon: AppColors.primary,
                   onTap: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
 
-          const Positioned(left: 0, right: 0, bottom: 30, child: MiniPlayer()),
+          const Positioned(left: 0, right: 0, bottom: 85, child: MiniPlayer()),
+
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 30,
+            child: MyForm(
+              controller: searchController,
+              hintText: 'Artist and Songs in playlist',
+              prefixIcon: Icons.search,
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _SongTile extends StatelessWidget {
+  final TrackModel track;
+  final int index;
+  final bool isTablet;
+
+  const _SongTile({
+    required this.track,
+    required this.index,
+    required this.isTablet,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          clipBehavior: Clip.antiAlias,
+
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+
+            onTap: () async {
+              try {
+                final pageState = context
+                    .findAncestorStateOfType<_AlbumPageState>()!;
+
+                debugPrint('PAGE STATE = $pageState');
+
+                final tracks = pageState.serviceTracks;
+
+                final originalIndex = pageState._getOriginalIndex(track);
+
+                debugPrint('Tapped = ${track.title}');
+
+                debugPrint('Tapped id = ${track.videoId}');
+
+                debugPrint('Original index = $originalIndex');
+
+                debugPrint('Track at index = ${tracks[originalIndex].title}');
+
+                debugPrint('Video at index = ${tracks[originalIndex].videoId}');
+
+                if (!context.mounted) return;
+
+                await MusicService.instance.setPlaylist(
+                  playlist: tracks,
+                  startIndex: originalIndex,
+                  playlistName: pageState.widget.title,
+                );
+
+                await MusicService.instance.playTrack(originalIndex);
+              } catch (e) {
+                debugPrint('PLAYER ERROR = $e');
+
+                if (!context.mounted) return;
+
+                String errorMessage = 'Gagal memutar lagu';
+
+                if (e.toString().contains('age-restricted')) {
+                  errorMessage = 'Lagu ini dibatasi oleh usia.';
+                } else if (e.toString().contains('region-locked')) {
+                  errorMessage = 'Lagu tidak tersedia di wilayah Anda.';
+                } else if (e.toString().contains('playable')) {
+                  errorMessage = 'Lagu tidak dapat diputar.';
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(errorMessage),
+                    backgroundColor: Colors.red.shade400,
+                  ),
+                );
+              }
+            },
+
+            child: ListTile(
+              dense: true,
+
+              visualDensity: const VisualDensity(vertical: -1),
+
+              minVerticalPadding: 0,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 32 : 7,
+                vertical: 1,
+              ),
+
+              leading: ClipRRect(
+                borderRadius: BorderRadius.circular(7),
+                child: (track.thumbnail?.trim().isNotEmpty ?? false)
+                    ? CachedNetworkImage(
+                        imageUrl: track.thumbnail!,
+                        width: isTablet ? 70 : 45,
+                        height: isTablet ? 70 : 45,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        width: isTablet ? 70 : 45,
+                        height: isTablet ? 70 : 45,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.white10,
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isTablet ? 22 : 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+              ),
+
+              title: Text(
+                track.title.length > 30
+                    ? '${track.title.substring(0, 30)}...'
+                    : track.title,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isTablet ? 18 : 16,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              subtitle: Text(
+                track.artist,
+                style: const TextStyle(color: Colors.white54),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              trailing: const Icon(Icons.more_horiz, color: Colors.white54),
+            ),
+          ),
+        ),
+
+        Padding(
+          padding: EdgeInsets.only(left: isTablet ? 118 : 70, right: 12),
+          child: Divider(height: 1, thickness: .1, color: Colors.white),
+        ),
+      ],
     );
   }
 }
