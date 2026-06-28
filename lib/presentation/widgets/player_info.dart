@@ -5,6 +5,7 @@ import 'package:flutter_volume_controller/flutter_volume_controller.dart';
 import 'package:sawitify/core/utils/audio_output.dart';
 import 'package:sawitify/presentation/widgets/player_playback.dart';
 import 'package:sawitify/presentation/widgets/rectangle_button.dart';
+import 'package:widgetbook_annotation/widgetbook_annotation.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/model/track_model.dart';
@@ -41,6 +42,7 @@ class _MusicInfoSectionState extends State<MusicInfoSection> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
+    final music = MusicService.instance;
 
     return Column(
       children: [
@@ -158,6 +160,42 @@ class _MusicInfoSectionState extends State<MusicInfoSection> {
 
             const Icon(Icons.volume_up, size: 25, color: Colors.white70),
           ],
+        ),
+
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          transitionBuilder: (child, animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, -.15),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            );
+          },
+          child: music.hasSleepTimer
+              ? InkWell(
+                  key: const ValueKey("sleep_timer"),
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () => _showSleepTimer(context),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    child: Text(
+                      "Timer Running (${music.remainingSleepTimeLabel})",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox(key: ValueKey("no_sleep_timer")),
         ),
 
         const SizedBox(height: 20),
@@ -558,11 +596,21 @@ void _showListQueue(BuildContext context, String playlistName) {
                             height: 40,
                           ),
 
-                          RectangleButton(
-                            icon: Icons.timer,
-                            width: 75,
-                            height: 40,
-                            onTap: () => _showSleepTimer(context),
+                          AnimatedBuilder(
+                            animation: MusicService.instance,
+                            builder: (_, __) {
+                              final music = MusicService.instance;
+
+                              return RectangleButton(
+                                icon: Icons.timer,
+                                color: music.hasSleepTimer
+                                    ? AppColors.primary
+                                    : Colors.white,
+                                width: 75,
+                                height: 40,
+                                onTap: () => _showSleepTimer(context),
+                              );
+                            },
                           ),
                         ],
                       ),
