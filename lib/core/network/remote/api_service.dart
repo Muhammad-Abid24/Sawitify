@@ -36,6 +36,13 @@ abstract class ApiService {
   );
 
   @POST('/music/get_search_suggestions')
+  Future<dynamic> searchSuggestion(
+    @Query('alt') String alt,
+    @Query('key') String key,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('/search')
   Future<dynamic> search(
     @Query('alt') String alt,
     @Query('key') String key,

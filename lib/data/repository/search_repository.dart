@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:sawitify/core/network/api_client.dart';
 import 'package:sawitify/core/network/service_config.dart';
 
@@ -8,172 +9,393 @@ class SearchRepository {
 
   final ApiClient api;
 
-  Future<SearchResponse> search(String keyword) async {
-    final Map<String, dynamic> json =
-        await api.apiSearch.search("json", ServiceConfig.apiKey!, {
-              "context": {
-                "client": {
-                  "clientName": "WEB_REMIX",
-                  "clientVersion": "1.20260603.06.00",
-                  "hl": "id",
-                  "gl": "ID",
-                },
-                "user": {"enableSafetyMode": false},
-              },
-              "input": keyword,
-            })
-            as Map<String, dynamic>;
+  static const String searchArtistParams =
+      "Eg-KAQwIABAAGAAgASgAMABqChAEEAMQCRAFEAo%3D";
+  static const String searchSongParams =
+      "Eg-KAQwIARAAGAAgACgAMABqChAEEAMQCRAFEAo%3D";
+  static const String searchAlbumParams =
+      "Eg-KAQwIABAAGAEgACgAMABqChAEEAMQCRAFEAo%3D";
 
-    final List<String> suggestions = [];
+  Future<Map<String, dynamic>> _request(String query, String params) async {
+    return await api.apiSearch.search("json", ServiceConfig.apiKey!, {
+          "context": {
+            "capabilities": {},
+            "client": {
+              "clientName": "WEB_REMIX",
+              "clientVersion": "1.20260623.13.00",
+              "hl": "en",
+              "gl": "ID",
+            },
+            "user": {"enableSafetyMode": false},
+          },
+          "query": query,
+          "params": params,
+        })
+        as Map<String, dynamic>;
+  }
+
+  Future<List<SearchItem>> searchArtists(String query) async {
+    final json = await _request(query, searchArtistParams);
+    return _parseArtists(json);
+  }
+
+  Future<List<SearchItem>> searchSongs(String query) async {
+    final json = await _request(query, searchSongParams);
+    return _parseSongs(json);
+  }
+
+  Future<List<SearchItem>> searchAlbums(String query) async {
+    final json = await _request(query, searchAlbumParams);
+    return _parseAlbums(json);
+  }
+
+  List<SearchItem> _parseArtists(Map<String, dynamic> json) {
     final List<SearchItem> items = [];
 
-    final List contents = json["contents"] as List? ?? [];
+    final tabs =
+        json["contents"]?["tabbedSearchResultsRenderer"]?["tabs"] as List? ??
+        [];
 
-    for (final section in contents) {
-      final renderer =
-          section["searchSuggestionsSectionRenderer"] as Map<String, dynamic>?;
+    for (final tab in tabs) {
+      final sections =
+          tab["tabRenderer"]?["content"]?["sectionListRenderer"]?["contents"]
+              as List? ??
+          [];
 
-      if (renderer == null) continue;
+      for (final section in sections) {
+        final shelf = section["musicShelfRenderer"];
 
-      final List rows = renderer["contents"] as List? ?? [];
+        if (shelf == null) continue;
 
-      for (final row in rows) {
-        //
-        // =========================
-        // SEARCH SUGGESTION
-        // =========================
-        //
+        final rows = shelf["contents"] as List? ?? [];
 
-        if (row["searchSuggestionRenderer"] != null) {
-          final suggestion =
-              row["searchSuggestionRenderer"] as Map<String, dynamic>;
+        for (final row in rows) {
+          final renderer = row["musicResponsiveListItemRenderer"];
 
-          final List runs = suggestion["suggestion"]?["runs"] as List? ?? [];
+          if (renderer == null) continue;
 
-          final text = runs.map((e) => e["text"]?.toString() ?? "").join();
+          final flex = renderer["flexColumns"] as List? ?? [];
 
-          if (text.isNotEmpty) {
-            suggestions.add(text);
-          }
+          if (flex.isEmpty) continue;
 
-          continue;
-        }
+          //--------------------------------------------------
+          // TITLE
+          //--------------------------------------------------
 
-        //
-        // =========================
-        // SEARCH RESULT
-        // =========================
-        //
-
-        if (row["musicResponsiveListItemRenderer"] == null) {
-          continue;
-        }
-
-        final item =
-            row["musicResponsiveListItemRenderer"] as Map<String, dynamic>;
-
-        final List flexColumns = item["flexColumns"] as List? ?? [];
-
-        if (flexColumns.isEmpty) {
-          continue;
-        }
-
-        //
-        // title
-        //
-
-        final title =
-            flexColumns
-                .first["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]?[0]?["text"]
-                ?.toString() ??
-            "";
-
-        //
-        // subtitle
-        //
-
-        String subtitle = "";
-        String artist = "";
-
-        if (flexColumns.length > 1) {
-          final List subtitleRuns =
-              flexColumns[1]["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]
+          final titleRuns =
+              flex[0]["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]
                   as List? ??
               [];
 
-          subtitle = subtitleRuns
-              .map((e) => e["text"]?.toString() ?? "")
-              .join();
+          final title = titleRuns.isNotEmpty
+              ? titleRuns.first["text"]?.toString() ?? ""
+              : "";
 
-          if (subtitleRuns.length >= 3) {
-            artist = subtitleRuns[2]["text"]?.toString() ?? "";
+          //--------------------------------------------------
+          // SUBTITLE
+          //--------------------------------------------------
+
+          String subtitle = "";
+
+          if (flex.length > 1) {
+            final runs =
+                flex[1]["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]
+                    as List? ??
+                [];
+
+            subtitle = runs.map((e) => e["text"]?.toString() ?? "").join();
           }
+
+          //--------------------------------------------------
+          // THUMBNAIL
+          //--------------------------------------------------
+
+          String thumbnail = "";
+
+          final thumbnails =
+              renderer["thumbnail"]?["musicThumbnailRenderer"]?["thumbnail"]?["thumbnails"]
+                  as List? ??
+              [];
+
+          if (thumbnails.isNotEmpty) {
+            thumbnail = thumbnails.last["url"]?.toString() ?? "";
+          }
+
+          //--------------------------------------------------
+          // ID
+          //--------------------------------------------------
+
+          String id = "";
+
+          Map<String, dynamic>? nav =
+              renderer["navigationEndpoint"] as Map<String, dynamic>?;
+
+          nav ??= titleRuns.isNotEmpty
+              ? titleRuns.first["navigationEndpoint"] as Map<String, dynamic>?
+              : null;
+
+          if (nav != null) {
+            id = nav["browseEndpoint"]?["browseId"]?.toString() ?? "";
+          }
+
+          items.add(
+            SearchItem(
+              id: id,
+              title: title,
+              artist: title,
+              subtitle: subtitle,
+              thumbnail: thumbnail,
+              type: SearchItemType.artist,
+            ),
+          );
         }
-
-        //
-        // thumbnail
-        //
-
-        String thumbnail = "";
-
-        final List thumbnails =
-            item["thumbnail"]?["musicThumbnailRenderer"]?["thumbnail"]?["thumbnails"]
-                as List? ??
-            [];
-
-        if (thumbnails.isNotEmpty) {
-          thumbnail = thumbnails.last["url"]?.toString() ?? "";
-        }
-
-        //
-        // id
-        //
-
-        String id = "";
-
-        final nav = item["navigationEndpoint"] as Map<String, dynamic>? ?? {};
-
-        if (nav["watchEndpoint"] != null) {
-          id = nav["watchEndpoint"]["videoId"]?.toString() ?? "";
-        }
-
-        if (id.isEmpty && nav["browseEndpoint"] != null) {
-          id = nav["browseEndpoint"]["browseId"]?.toString() ?? "";
-        }
-
-        //
-        // type
-        //
-
-        final lower = subtitle.toLowerCase();
-
-        SearchItemType type = SearchItemType.unknown;
-
-        if (lower.contains("song") || lower.contains("lagu")) {
-          type = SearchItemType.song;
-        } else if (lower.contains("artist") ||
-            lower.contains("artis") ||
-            lower.contains("audiens")) {
-          type = SearchItemType.artist;
-        } else if (lower.contains("album")) {
-          type = SearchItemType.album;
-        } else if (lower.contains("playlist")) {
-          type = SearchItemType.playlist;
-        }
-
-        items.add(
-          SearchItem(
-            id: id,
-            artist: artist,
-            title: title,
-            subtitle: subtitle,
-            thumbnail: thumbnail,
-            type: type,
-          ),
-        );
       }
     }
 
-    return SearchResponse(suggestions: suggestions, items: items);
+    return items;
+  }
+
+  List<SearchItem> _parseSongs(Map<String, dynamic> json) {
+    final List<SearchItem> items = [];
+
+    final tabs =
+        json["contents"]?["tabbedSearchResultsRenderer"]?["tabs"] as List? ??
+        [];
+
+    for (final tab in tabs) {
+      final sections =
+          tab["tabRenderer"]?["content"]?["sectionListRenderer"]?["contents"]
+              as List? ??
+          [];
+
+      for (final section in sections) {
+        final shelf = section["musicShelfRenderer"];
+
+        if (shelf == null) continue;
+
+        final rows = shelf["contents"] as List? ?? [];
+
+        for (final row in rows) {
+          final renderer = row["musicResponsiveListItemRenderer"];
+
+          if (renderer == null) continue;
+
+          final flex = renderer["flexColumns"] as List? ?? [];
+
+          if (flex.isEmpty) continue;
+
+          //--------------------------------------------------
+          // TITLE
+          //--------------------------------------------------
+
+          final titleRuns =
+              flex[0]["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]
+                  as List? ??
+              [];
+
+          final title = titleRuns.isNotEmpty
+              ? titleRuns.first["text"]?.toString() ?? ""
+              : "";
+
+          //--------------------------------------------------
+          // SUBTITLE
+          //--------------------------------------------------
+
+          String subtitle = "";
+          String artist = "";
+
+          if (flex.length > 1) {
+            final runs =
+                flex[1]["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]
+                    as List? ??
+                [];
+
+            subtitle = runs.map((e) => e["text"]?.toString() ?? "").join();
+
+            for (final run in runs) {
+              final endpoint = run["navigationEndpoint"];
+
+              if (endpoint == null) continue;
+
+              final pageType =
+                  endpoint["browseEndpoint"]?["browseEndpointContextSupportedConfigs"]?["browseEndpointContextMusicConfig"]?["pageType"]
+                      ?.toString();
+
+              if (pageType == "MUSIC_PAGE_TYPE_ARTIST") {
+                artist = run["text"]?.toString() ?? "";
+                break;
+              }
+            }
+          }
+
+          //--------------------------------------------------
+          // THUMBNAIL
+          //--------------------------------------------------
+
+          String thumbnail = "";
+
+          final thumbnails =
+              renderer["thumbnail"]?["musicThumbnailRenderer"]?["thumbnail"]?["thumbnails"]
+                  as List? ??
+              [];
+
+          if (thumbnails.isNotEmpty) {
+            thumbnail = thumbnails.last["url"]?.toString() ?? "";
+          }
+
+          //--------------------------------------------------
+          // ID
+          //--------------------------------------------------
+
+          String id = "";
+
+          Map<String, dynamic>? nav =
+              renderer["navigationEndpoint"] as Map<String, dynamic>?;
+
+          nav ??= titleRuns.isNotEmpty
+              ? titleRuns.first["navigationEndpoint"] as Map<String, dynamic>?
+              : null;
+
+          if (nav != null) {
+            id = nav["watchEndpoint"]?["videoId"]?.toString() ?? "";
+          }
+
+          items.add(
+            SearchItem(
+              id: id,
+              title: title,
+              artist: artist,
+              subtitle: subtitle,
+              thumbnail: thumbnail,
+              type: SearchItemType.song,
+            ),
+          );
+        }
+      }
+    }
+
+    return items;
+  }
+
+  List<SearchItem> _parseAlbums(Map<String, dynamic> json) {
+    final List<SearchItem> items = [];
+
+    final tabs =
+        json["contents"]?["tabbedSearchResultsRenderer"]?["tabs"] as List? ??
+        [];
+
+    for (final tab in tabs) {
+      final sections =
+          tab["tabRenderer"]?["content"]?["sectionListRenderer"]?["contents"]
+              as List? ??
+          [];
+
+      for (final section in sections) {
+        final shelf = section["musicShelfRenderer"];
+
+        if (shelf == null) continue;
+
+        final rows = shelf["contents"] as List? ?? [];
+
+        for (final row in rows) {
+          final renderer = row["musicResponsiveListItemRenderer"];
+
+          if (renderer == null) continue;
+
+          final flex = renderer["flexColumns"] as List? ?? [];
+
+          if (flex.isEmpty) continue;
+
+          //--------------------------------------------------
+          // TITLE
+          //--------------------------------------------------
+
+          final titleRuns =
+              flex[0]["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]
+                  as List? ??
+              [];
+
+          final title = titleRuns.isNotEmpty
+              ? titleRuns.first["text"]?.toString() ?? ""
+              : "";
+
+          //--------------------------------------------------
+          // SUBTITLE
+          //--------------------------------------------------
+
+          String subtitle = "";
+          String artist = "";
+
+          if (flex.length > 1) {
+            final runs =
+                flex[1]["musicResponsiveListItemFlexColumnRenderer"]?["text"]?["runs"]
+                    as List? ??
+                [];
+
+            subtitle = runs.map((e) => e["text"]?.toString() ?? "").join();
+
+            for (final run in runs) {
+              final endpoint = run["navigationEndpoint"];
+
+              if (endpoint == null) continue;
+
+              final pageType =
+                  endpoint["browseEndpoint"]?["browseEndpointContextSupportedConfigs"]?["browseEndpointContextMusicConfig"]?["pageType"]
+                      ?.toString();
+
+              if (pageType == "MUSIC_PAGE_TYPE_ARTIST") {
+                artist = run["text"]?.toString() ?? "";
+                break;
+              }
+            }
+          }
+
+          //--------------------------------------------------
+          // THUMBNAIL
+          //--------------------------------------------------
+
+          String thumbnail = "";
+
+          final thumbnails =
+              renderer["thumbnail"]?["musicThumbnailRenderer"]?["thumbnail"]?["thumbnails"]
+                  as List? ??
+              [];
+
+          if (thumbnails.isNotEmpty) {
+            thumbnail = thumbnails.last["url"]?.toString() ?? "";
+          }
+
+          //--------------------------------------------------
+          // ID
+          //--------------------------------------------------
+
+          String id = "";
+
+          Map<String, dynamic>? nav =
+              renderer["navigationEndpoint"] as Map<String, dynamic>?;
+
+          nav ??= titleRuns.isNotEmpty
+              ? titleRuns.first["navigationEndpoint"] as Map<String, dynamic>?
+              : null;
+
+          if (nav != null) {
+            id = nav["browseEndpoint"]?["browseId"]?.toString() ?? "";
+          }
+
+          items.add(
+            SearchItem(
+              id: id,
+              title: title,
+              artist: artist,
+              subtitle: subtitle,
+              thumbnail: thumbnail,
+              type: SearchItemType.album,
+            ),
+          );
+        }
+      }
+    }
+
+    return items;
   }
 }
