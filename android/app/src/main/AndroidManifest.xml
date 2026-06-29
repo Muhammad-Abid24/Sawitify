@@ -14,7 +14,7 @@
         android:name="android.permission.BLUETOOTH_ADMIN"/>
 
     <application
-        android:label="sawitify"
+        android:label="Sawitify"
         android:hardwareAccelerated="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
