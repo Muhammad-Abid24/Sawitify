@@ -36,6 +36,7 @@ class AppLifecycleObserver with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.detached) {
       MusicService.instance.forceKillPlayer();
+      exit(0);
     }
   }
 }

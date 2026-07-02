@@ -25,6 +25,8 @@ extension MusicQueueService on MusicService {
     _buildQueue();
 
     notifyListeners();
+
+    _preloadQueue();
   }
 
   /// Membuat urutan acak playlist.
@@ -122,6 +124,8 @@ extension MusicQueueService on MusicService {
     _queuePosition = _queue.indexOf(_currentIndex);
 
     notifyListeners();
+
+    _preloadQueue();
   }
 
   // =========================================================

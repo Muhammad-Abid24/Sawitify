@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:Sawitify/data/model/player_model.dart';
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
@@ -30,6 +31,11 @@ class MusicService extends ChangeNotifier {
 
   final AudioPlayer player = AudioPlayer();
 
+  final ConcatenatingAudioSource _playlistAudioSource = ConcatenatingAudioSource(
+    useLazyPreparation: true,
+    children: [],
+  );
+
   // ======================================================
   // PLAYLIST
   // ======================================================
@@ -57,6 +63,10 @@ class MusicService extends ChangeNotifier {
   bool _shuffleEnabled = false;
 
   String? _lastError;
+
+  bool _isPreloading = false;
+
+  bool _queueChanged = false;
 
   // ======================================================
   // SLEEP TIMER
@@ -92,9 +102,9 @@ class MusicService extends ChangeNotifier {
 
   StreamSubscription<PlayerState>? _playerStateSub;
 
-  StreamSubscription<Duration>? _positionSub;
-
   StreamSubscription<bool>? _playingSub;
+
+  StreamSubscription<int?>? _currentIndexSub;
 
   // ======================================================
   // GETTERS
@@ -133,6 +143,8 @@ class MusicService extends ChangeNotifier {
   String get playlistName => _playlistName;
 
   bool get isPlaying => _isPlaying;
+
+  final Map<String, Future<PlayerModel>> _playerCache = {};
 
   // timer
   bool get hasSleepTimer => _sleepTimer != null;
@@ -178,8 +190,7 @@ class MusicService extends ChangeNotifier {
     }
 
     _listenPlayerState();
-
-    _listenTrackCompletion();
+    _listenCurrentIndex();
 
     if (_shuffleEnabled) {
       _buildShuffleQueue();
@@ -188,7 +199,6 @@ class MusicService extends ChangeNotifier {
     _buildQueue();
 
     _moveCurrentTrackToTop();
-
     _playingSub?.cancel();
 
     _playingSub = player.playingStream.listen((playing) {
@@ -208,8 +218,8 @@ class MusicService extends ChangeNotifier {
   @override
   void dispose() {
     _playerStateSub?.cancel();
-    _positionSub?.cancel();
     _playingSub?.cancel();
+    _currentIndexSub?.cancel();
 
     player.dispose();
 

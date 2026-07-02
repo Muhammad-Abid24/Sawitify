@@ -86,11 +86,13 @@ class _MusicInfoSectionState extends State<MusicInfoSection> {
         const SizedBox(height: 22),
 
         StreamBuilder<Duration>(
+          key: ValueKey(widget.videoId),
           stream: MusicService.instance.player.positionStream,
           builder: (context, positionSnapshot) {
             final duration = MusicService.instance.trackDuration;
 
-            final rawPosition = positionSnapshot.data ?? Duration.zero;
+            final isLoading = MusicService.instance.loadingTrack;
+            final rawPosition = isLoading ? Duration.zero : (positionSnapshot.data ?? Duration.zero);
 
             final position = rawPosition > duration ? duration : rawPosition;
 

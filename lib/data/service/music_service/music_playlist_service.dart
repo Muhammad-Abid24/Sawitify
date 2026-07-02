@@ -9,16 +9,36 @@ extension MusicPlaylistService on MusicService {
   ///
   /// Method ini akan:
   /// - Menyimpan playlist baru
+  /// - Menghapus cache stream playlist lama
   /// - Menentukan lagu awal
-  /// - Menyimpan playlist ke storage
-  /// - Membangun ulang queue dan shuffle
-  /// - Memindahkan lagu aktif ke urutan pertama queue
+  /// - Menyimpan playlist
+  /// - Membangun ulang queue
   Future<void> setPlaylist({
     required List<TrackModel> playlist,
     required int startIndex,
     String? playlistName,
   }) async {
-    _playlist = List.from(playlist);
+    // ----------------------------------------
+    // Stop playback lama
+    // ----------------------------------------
+
+    await player.stop();
+    try { await player.seek(Duration.zero); } catch (_) {}
+    await _playlistAudioSource.clear();
+
+    _trackDuration = null;
+
+    // ----------------------------------------
+    // Hapus cache playlist lama
+    // ----------------------------------------
+
+    _playerCache.clear();
+
+    // ----------------------------------------
+    // Playlist
+    // ----------------------------------------
+
+    _playlist = List<TrackModel>.from(playlist);
 
     _playlistName = playlistName ?? 'Unknown Playlist';
 
@@ -28,15 +48,25 @@ extension MusicPlaylistService on MusicService {
       _currentIndex = startIndex.clamp(0, _playlist.length - 1);
     }
 
-    await _savePlaylist();
+    // ----------------------------------------
+    // Queue
+    // ----------------------------------------
 
     if (_shuffleEnabled) {
       _buildShuffleQueue();
+    } else {
+      _shuffleQueue.clear();
     }
 
     _buildQueue();
 
     _moveCurrentTrackToTop();
+
+    // ----------------------------------------
+    // Storage
+    // ----------------------------------------
+
+    await _savePlaylist();
 
     notifyListeners();
   }
@@ -45,12 +75,7 @@ extension MusicPlaylistService on MusicService {
   // STORAGE
   // =========================================================
 
-  /// Menyimpan seluruh playlist
-  /// ke local storage.
-  ///
-  /// Method ini juga akan:
-  /// - Menyimpan current index
-  /// - Menyimpan current track
+  /// Menyimpan playlist.
   Future<void> _savePlaylist() async {
     await MusicStorage.savePlaylist(
       _playlist.map((e) => jsonEncode(e.toJson())).toList(),
@@ -72,8 +97,8 @@ extension MusicPlaylistService on MusicService {
     );
   }
 
-  /// Mengembalikan lagu terakhir
-  /// yang tersimpan di storage.
+  /// Mengembalikan playlist terakhir
+  /// dari storage.
   Future<void> _restoreCurrentTrack() async {
     final storedTrack = await MusicStorage.loadCurrentTrack();
 
@@ -85,6 +110,10 @@ extension MusicPlaylistService on MusicService {
 
     _currentIndex = 0;
 
+    _buildQueue();
+
+    _moveCurrentTrackToTop();
+
     notifyListeners();
   }
 
@@ -92,22 +121,40 @@ extension MusicPlaylistService on MusicService {
   // CLEAR
   // =========================================================
 
-  /// Menghapus seluruh playlist,
-  /// queue dan data playback.
+  /// Menghapus seluruh playlist.
   Future<void> clearPlaylist() async {
+    await player.stop();
+    await _playlistAudioSource.clear();
+
     _playlist.clear();
 
-    _currentIndex = 0;
+    _playerCache.clear();
 
     _shuffleQueue.clear();
 
     _queue.clear();
 
+    _currentIndex = 0;
+
     _queuePosition = 0;
 
     _trackDuration = null;
 
-    await player.stop();
+    _currentMediaItem = null;
+
+    _playlistName = '';
+
+    _lastError = null;
+
+    _loadingTrack = false;
+
+    _isPlaying = false;
+
+    _nextLock = false;
+    
+    _isPreloading = false;
+    
+    _queueChanged = false;
 
     await MusicStorage.clear();
 
